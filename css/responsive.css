@@ -1,0 +1,483 @@
+/* ========================================
+   Archivist DnD Tools - Responsive Styles
+   ======================================== */
+
+/* Mobile First Approach */
+
+/* Small Tablets and Large Phones */
+@media (max-width: 768px) {
+  /* Navigation */
+  .nav-menu {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    width: 100%;
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    flex-direction: column;
+    padding: var(--spacing-4) 0;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: all var(--transition-base);
+    z-index: var(--z-dropdown);
+  }
+  
+  .nav-menu.open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  
+  .nav-menu li {
+    padding: 0 var(--spacing-4);
+  }
+  
+  .nav-menu a {
+    display: block;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+  
+  .nav-toggle {
+    display: flex;
+  }
+  
+  /* Main Content */
+  .main-content {
+    padding: var(--spacing-4) var(--spacing-3);
+  }
+  
+  /* Target Panel */
+  .target-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+  }
+  
+  .saves-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .resistance-grid,
+  .traits-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Build Comparison - Stack on Mobile */
+  .build-comparison {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+  }
+  
+  .build-column {
+    min-height: auto;
+  }
+  
+  .build-header {
+    flex-direction: column;
+    gap: var(--spacing-3);
+    text-align: center;
+  }
+  
+  .build-actions {
+    justify-content: center;
+  }
+  
+  .build-content {
+    padding: var(--spacing-4);
+  }
+  
+  /* DPR Summary */
+  .dpr-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-3);
+  }
+  
+  .advantage-states {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2);
+  }
+  
+  /* Modal */
+  .modal-content {
+    width: 95%;
+    max-height: 95vh;
+    margin: var(--spacing-2);
+  }
+  
+  .modal-body {
+    padding: var(--spacing-4);
+  }
+  
+  /* Charts */
+  .chart-canvas {
+    height: 250px;
+  }
+  
+  .chart-legend {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+  
+  /* Policy Chips */
+  .policy-chips {
+    justify-content: center;
+  }
+  
+  /* Form Controls */
+  .ac-controls {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+  
+  .ac-input {
+    width: 100%;
+  }
+}
+
+/* Small Phones */
+@media (max-width: 480px) {
+  /* Typography */
+  h1 {
+    font-size: var(--text-2xl);
+  }
+  
+  h2 {
+    font-size: var(--text-xl);
+  }
+  
+  h3 {
+    font-size: var(--text-lg);
+  }
+  
+  /* Navigation */
+  .nav-container {
+    height: 56px;
+    padding: 0 var(--spacing-3);
+  }
+  
+  .nav-brand h1 {
+    font-size: var(--text-lg);
+  }
+  
+  .nav-menu {
+    top: 56px;
+  }
+  
+  /* Main Content */
+  .main-content {
+    padding: var(--spacing-3) var(--spacing-2);
+  }
+  
+  /* Target Panel */
+  .panel-content {
+    padding: var(--spacing-4);
+  }
+  
+  .saves-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-2);
+  }
+  
+  .save-input input {
+    font-size: var(--text-sm);
+    padding: var(--spacing-2);
+  }
+  
+  /* Build Comparison */
+  .build-content {
+    padding: var(--spacing-3);
+  }
+  
+  .build-placeholder,
+  .results-placeholder {
+    padding: var(--spacing-4);
+    min-height: 150px;
+  }
+  
+  .build-placeholder p,
+  .results-placeholder p {
+    font-size: var(--text-base);
+  }
+  
+  /* DPR Summary */
+  .dpr-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .dpr-metric {
+    padding: var(--spacing-3);
+  }
+  
+  .dpr-metric-value {
+    font-size: var(--text-xl);
+  }
+  
+  /* Form Elements */
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--text-base);
+  }
+  
+  .btn {
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--text-sm);
+  }
+  
+  /* Charts */
+  .chart-canvas {
+    height: 200px;
+  }
+  
+  .chart-container {
+    padding: var(--spacing-3);
+  }
+  
+  /* Modal */
+  .modal-content {
+    width: 98%;
+    margin: var(--spacing-1);
+  }
+  
+  .modal-header {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+  
+  .modal-body {
+    padding: var(--spacing-3);
+  }
+}
+
+/* Medium Tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .build-comparison {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .build-column:nth-child(3) {
+    grid-column: 1 / -1;
+    max-width: 50%;
+    margin: 0 auto;
+  }
+  
+  .target-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .saves-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Large Tablets and Small Desktops */
+@media (min-width: 1025px) and (max-width: 1200px) {
+  .main-content {
+    padding: var(--spacing-6) var(--spacing-5);
+  }
+  
+  .target-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .build-comparison {
+    gap: var(--spacing-5);
+  }
+}
+
+/* Large Desktops */
+@media (min-width: 1201px) {
+  .main-content {
+    padding: var(--spacing-8) var(--spacing-6);
+  }
+  
+  .target-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .build-comparison {
+    gap: var(--spacing-8);
+  }
+  
+  .build-content {
+    padding: var(--spacing-8);
+  }
+}
+
+/* High Resolution Displays */
+@media (min-width: 1400px) {
+  .nav-container,
+  .main-content,
+  .footer-content {
+    max-width: 1600px;
+  }
+  
+  .target-panel {
+    margin-bottom: var(--spacing-8);
+  }
+  
+  .panel-content {
+    padding: var(--spacing-8);
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets */
+  .btn,
+  .nav-menu a,
+  .panel-toggle,
+  .modal-close {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove hover effects */
+  .btn:hover,
+  .nav-menu a:hover,
+  .resistance-toggle:hover,
+  .trait-toggle:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  /* Adjust slider for touch */
+  input[type="range"]::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  
+  /* Larger checkboxes for touch */
+  input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+  
+  input[type="checkbox"]:checked::after {
+    left: 3px;
+  }
+}
+
+/* Landscape Orientation on Mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .build-comparison {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .build-column:nth-child(3) {
+    grid-column: 1 / -1;
+    max-width: 60%;
+    margin: 0 auto;
+  }
+  
+  .target-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .saves-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Print Optimizations */
+@media print {
+  .build-comparison {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+    page-break-inside: avoid;
+  }
+  
+  .build-column {
+    page-break-inside: avoid;
+    margin-bottom: var(--spacing-6);
+  }
+  
+  .target-panel {
+    page-break-inside: avoid;
+    margin-bottom: var(--spacing-4);
+  }
+  
+  .chart-canvas {
+    height: 300px;
+  }
+}
+
+/* Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .loading-spinner {
+    animation: none;
+    border: 4px solid var(--primary-color);
+  }
+}
+
+/* Dark Mode Support (if user prefers dark) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #333333;
+    --text-primary: #ffffff;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+    --border-color: #4a4a4a;
+    --border-light: #555555;
+  }
+  
+  .build-header {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+  
+  input[type="checkbox"] {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #000000;
+    --border-light: #333333;
+  }
+  
+  .btn {
+    border: 2px solid currentColor;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    border: 2px solid var(--border-color);
+  }
+  
+  .build-column {
+    border: 2px solid var(--border-color);
+  }
+}

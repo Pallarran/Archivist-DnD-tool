@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivist DnD Tools - Character Optimizer</title>
+    <meta name="description" content="A joyful, rigorous optimizer for D&D 5e character builds featuring DPR simulation, leveling analysis, and character comparison.">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2D1B69">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="alternate icon" href="assets/icons/favicon.ico">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Loading Archivist DnD Tools...</p>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <h1>Archivist DnD Tools</h1>
+                </div>
+                <ul class="nav-menu" role="menubar">
+                    <li role="none"><a href="#build-lab" role="menuitem">Build Lab</a></li>
+                    <li role="none"><a href="#dpr-simulator" role="menuitem" class="active">DPR Simulator</a></li>
+                    <li role="none"><a href="#leveling-explorer" role="menuitem">Leveling Explorer</a></li>
+                    <li role="none"><a href="#compare" role="menuitem">Compare</a></li>
+                    <li role="none"><a href="#library" role="menuitem">Library</a></li>
+                    <li role="none"><a href="#exports" role="menuitem">Exports</a></li>
+                </ul>
+                <button class="nav-toggle" aria-label="Toggle navigation menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Target Panel (Shared across builds) -->
+            <section class="target-panel" aria-label="Target Configuration">
+                <div class="panel-header">
+                    <h2>Target Configuration</h2>
+                    <button class="panel-toggle" aria-label="Toggle target panel">
+                        <span class="toggle-icon"></span>
+                    </button>
+                </div>
+                <div class="panel-content">
+                    <div class="target-grid">
+                        <!-- AC Configuration -->
+                        <div class="target-group">
+                            <label for="target-ac">Armor Class</label>
+                            <div class="ac-controls">
+                                <input type="range" id="target-ac" min="8" max="25" value="15" class="ac-slider">
+                                <input type="number" id="target-ac-value" min="8" max="25" value="15" class="ac-input">
+                            </div>
+                        </div>
+
+                        <!-- Saves Configuration -->
+                        <div class="target-group">
+                            <h3>Saving Throws</h3>
+                            <div class="saves-grid">
+                                <div class="save-input">
+                                    <label for="save-str">STR</label>
+                                    <input type="number" id="save-str" value="0" min="-5" max="15">
+                                </div>
+                                <div class="save-input">
+                                    <label for="save-dex">DEX</label>
+                                    <input type="number" id="save-dex" value="2" min="-5" max="15">
+                                </div>
+                                <div class="save-input">
+                                    <label for="save-con">CON</label>
+                                    <input type="number" id="save-con" value="1" min="-5" max="15">
+                                </div>
+                                <div class="save-input">
+                                    <label for="save-int">INT</label>
+                                    <input type="number" id="save-int" value="-1" min="-5" max="15">
+                                </div>
+                                <div class="save-input">
+                                    <label for="save-wis">WIS</label>
+                                    <input type="number" id="save-wis" value="3" min="-5" max="15">
+                                </div>
+                                <div class="save-input">
+                                    <label for="save-cha">CHA</label>
+                                    <input type="number" id="save-cha" value="0" min="-5" max="15">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resistances/Immunities -->
+                        <div class="target-group">
+                            <h3>Damage Resistances</h3>
+                            <div class="resistance-grid">
+                                <label class="resistance-toggle">
+                                    <input type="checkbox" name="resistance" value="bludgeoning">
+                                    <span class="checkmark"></span>
+                                    Bludgeoning
+                                </label>
+                                <label class="resistance-toggle">
+                                    <input type="checkbox" name="resistance" value="piercing">
+                                    <span class="checkmark"></span>
+                                    Piercing
+                                </label>
+                                <label class="resistance-toggle">
+                                    <input type="checkbox" name="resistance" value="slashing">
+                                    <span class="checkmark"></span>
+                                    Slashing
+                                </label>
+                                <label class="resistance-toggle">
+                                    <input type="checkbox" name="resistance" value="fire">
+                                    <span class="checkmark"></span>
+                                    Fire
+                                </label>
+                                <label class="resistance-toggle">
+                                    <input type="checkbox" name="resistance" value="cold">
+                                    <span class="checkmark"></span>
+                                    Cold
+                                </label>
+                                <label class="resistance-toggle">
+                                    <input type="checkbox" name="resistance" value="lightning">
+                                    <span class="checkmark"></span>
+                                    Lightning
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Enemy Traits -->
+                        <div class="target-group">
+                            <h3>Enemy Traits</h3>
+                            <div class="traits-grid">
+                                <label class="trait-toggle">
+                                    <input type="checkbox" id="magic-resistance">
+                                    <span class="checkmark"></span>
+                                    Magic Resistance
+                                </label>
+                                <label class="trait-input">
+                                    <span>Legendary Resistances</span>
+                                    <input type="number" id="legendary-resistances" min="0" max="5" value="3">
+                                </label>
+                                <label class="trait-input">
+                                    <span>AoE Target Count</span>
+                                    <input type="number" id="aoe-targets" min="1" max="20" value="1">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Build Comparison Area -->
+            <section class="build-comparison" aria-label="Character Build Comparison">
+                <!-- Build A -->
+                <article class="build-column" id="build-a">
+                    <header class="build-header">
+                        <h2>Build A</h2>
+                        <div class="build-actions">
+                            <button class="btn-secondary" id="import-build-a">Import</button>
+                            <button class="btn-secondary" id="export-build-a">Export</button>
+                            <button class="btn-danger" id="clear-build-a">Clear</button>
+                        </div>
+                    </header>
+                    
+                    <div class="build-content">
+                        <!-- Build Inputs Section -->
+                        <section class="build-inputs">
+                            <h3>Character Setup</h3>
+                            <div class="input-group">
+                                <label for="build-a-name">Build Name</label>
+                                <input type="text" id="build-a-name" placeholder="e.g., Kaelen EK/Scout" value="">
+                            </div>
+                            
+                            <!-- Placeholder for build configuration -->
+                            <div class="build-placeholder">
+                                <p>Import a character build or use Build Lab to create one</p>
+                                <button class="btn-primary" onclick="showBuildLab('a')">Open Build Lab</button>
+                            </div>
+                        </section>
+
+                        <!-- Results Section -->
+                        <section class="build-results">
+                            <h3>DPR Results</h3>
+                            <div class="results-placeholder">
+                                <p>Results will appear here once a build is configured</p>
+                            </div>
+                        </section>
+                    </div>
+                </article>
+
+                <!-- Build B -->
+                <article class="build-column" id="build-b">
+                    <header class="build-header">
+                        <h2>Build B</h2>
+                        <div class="build-actions">
+                            <button class="btn-secondary" id="import-build-b">Import</button>
+                            <button class="btn-secondary" id="export-build-b">Export</button>
+                            <button class="btn-danger" id="clear-build-b">Clear</button>
+                        </div>
+                    </header>
+                    
+                    <div class="build-content">
+                        <section class="build-inputs">
+                            <h3>Character Setup</h3>
+                            <div class="input-group">
+                                <label for="build-b-name">Build Name</label>
+                                <input type="text" id="build-b-name" placeholder="e.g., Elven Sharpshooter" value="">
+                            </div>
+                            
+                            <div class="build-placeholder">
+                                <p>Import a character build or use Build Lab to create one</p>
+                                <button class="btn-primary" onclick="showBuildLab('b')">Open Build Lab</button>
+                            </div>
+                        </section>
+
+                        <section class="build-results">
+                            <h3>DPR Results</h3>
+                            <div class="results-placeholder">
+                                <p>Results will appear here once a build is configured</p>
+                            </div>
+                        </section>
+                    </div>
+                </article>
+
+                <!-- Build C -->
+                <article class="build-column" id="build-c">
+                    <header class="build-header">
+                        <h2>Build C</h2>
+                        <div class="build-actions">
+                            <button class="btn-secondary" id="import-build-c">Import</button>
+                            <button class="btn-secondary" id="export-build-c">Export</button>
+                            <button class="btn-danger" id="clear-build-c">Clear</button>
+                        </div>
+                    </header>
+                    
+                    <div class="build-content">
+                        <section class="build-inputs">
+                            <h3>Character Setup</h3>
+                            <div class="input-group">
+                                <label for="build-c-name">Build Name</label>
+                                <input type="text" id="build-c-name" placeholder="e.g., Great Weapon Master" value="">
+                            </div>
+                            
+                            <div class="build-placeholder">
+                                <p>Import a character build or use Build Lab to create one</p>
+                                <button class="btn-primary" onclick="showBuildLab('c')">Open Build Lab</button>
+                            </div>
+                        </section>
+
+                        <section class="build-results">
+                            <h3>DPR Results</h3>
+                            <div class="results-placeholder">
+                                <p>Results will appear here once a build is configured</p>
+                            </div>
+                        </section>
+                    </div>
+                </article>
+            </section>
+        </main>
+
+        <!-- Modals and Overlays -->
+        <div id="build-lab-modal" class="modal" role="dialog" aria-labelledby="build-lab-title" aria-hidden="true">
+            <div class="modal-content">
+                <header class="modal-header">
+                    <h2 id="build-lab-title">Build Lab</h2>
+                    <button class="modal-close" aria-label="Close build lab">&times;</button>
+                </header>
+                <div class="modal-body">
+                    <p>Build Lab interface will be implemented here</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; 2024 Archivist DnD Tools | Built for D&D 5e (2014 rules) | 
+                   <a href="#about">About</a> | 
+                   <a href="#help">Help</a> | 
+                   <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Error Boundary -->
+    <div id="error-boundary" class="error-boundary hidden">
+        <div class="error-content">
+            <h2>Something went wrong</h2>
+            <p id="error-message">An unexpected error occurred. Please refresh the page and try again.</p>
+            <button onclick="location.reload()" class="btn-primary">Reload Page</button>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="js/app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
