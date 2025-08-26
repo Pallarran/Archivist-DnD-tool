@@ -3,8 +3,6 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -17,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,6 +36,14 @@ jobs:
         working-directory: ./archivist-dnd-tools
         run: npm run build
 
+      - name: List build output (debugging)
+        working-directory: ./archivist-dnd-tools
+        run: |
+          echo "Contents of dist folder:"
+          ls -la dist/
+          echo "index.html content (first 10 lines):"
+          head -n 10 dist/index.html || echo "index.html not found"
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
@@ -46,14 +52,6 @@ jobs:
         with:
           path: ./archivist-dnd-tools/dist
 
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
