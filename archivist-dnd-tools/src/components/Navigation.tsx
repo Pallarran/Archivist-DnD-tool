@@ -2,10 +2,8 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 const navItems = [
-  { path: '/test', label: 'Test', key: 'test' },
-  // Temporarily disabled while debugging store issues
-  // { path: '/dpr-simulator', label: 'DPR Simulator', key: 'dpr' },
-  // { path: '/build-lab', label: 'Build Lab', key: 'buildLab' },
+  { path: '/dpr-simulator', label: 'DPR Simulator', key: 'dpr' },
+  { path: '/build-lab', label: 'Build Lab', key: 'buildLab' },
 ] as const;
 
 export const Navigation: React.FC = () => {
