@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Navigation } from './Navigation';
-import { NotificationSystem } from './NotificationSystem';
+import { SimpleNotificationSystem } from './SimpleNotificationSystem';
 
 export const Layout: React.FC = () => {
   return (
@@ -10,7 +10,7 @@ export const Layout: React.FC = () => {
       <main className="container mx-auto px-4 py-8">
         <Outlet />
       </main>
-      <NotificationSystem />
+      <SimpleNotificationSystem />
     </div>
   );
 };
