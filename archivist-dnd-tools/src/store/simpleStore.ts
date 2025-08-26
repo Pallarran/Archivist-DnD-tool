@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Basic Build interface - simplified version
+// Basic Build interface - extended to store detailed character data
 export interface SimpleBuild {
   id: string;
   name: string;
@@ -15,6 +15,30 @@ export interface SimpleBuild {
   damage: string;
   notes?: string;
   createdAt: string;
+  
+  // Detailed character data for editing
+  race?: string;
+  background?: string;
+  abilityScores?: {
+    strength: number;
+    dexterity: number;
+    constitution: number;
+    intelligence: number;
+    wisdom: number;
+    charisma: number;
+  };
+  classLevels?: Array<{
+    class: string;
+    level: number;
+    hitDie?: number;
+    subclass?: string;
+  }>;
+  equipment?: {
+    mainHand?: any;
+    offHand?: any;
+    armor?: any;
+    accessories?: any[];
+  };
 }
 
 // Notification interface

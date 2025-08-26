@@ -252,6 +252,17 @@ export const SimpleBuildLab: React.FC = () => {
       attackBonus: calculateAttackBonus(),
       damage: calculateDamage(),
       notes: `${buildRace} ${classNames} (${buildBackground})`,
+      // Store detailed character data for editing
+      race: buildRace,
+      background: buildBackground,
+      abilityScores: { ...abilityScores },
+      classLevels: classLevels.map(cl => ({ ...cl })),
+      equipment: {
+        mainHand: equipment.mainHand ? { ...equipment.mainHand } : null,
+        offHand: equipment.offHand ? { ...equipment.offHand } : null,
+        armor: equipment.armor ? { ...equipment.armor } : null,
+        accessories: equipment.accessories ? [...equipment.accessories] : []
+      }
     };
 
     addBuild(newBuild);
@@ -270,36 +281,74 @@ export const SimpleBuildLab: React.FC = () => {
     setEditingBuild(build);
     setBuildName(build.name);
     
-    // Parse notes to extract race, class info, and background
-    // Notes format: "Human fighter 1 (Soldier)"
-    const notesParts = build.notes?.match(/^(\w+)\s+(.*?)\s+\((.+)\)$/) || [];
-    if (notesParts.length >= 4) {
-      setBuildRace(notesParts[1]);
-      setBuildBackground(notesParts[3]);
+    // Load stored character data or fall back to parsing notes/defaults
+    if (build.race) {
+      setBuildRace(build.race);
+    } else {
+      // Fall back to parsing notes for older builds without detailed data
+      const notesParts = build.notes?.match(/^(\w+)\s+(.*?)\s+\((.+)\)$/) || [];
+      if (notesParts.length >= 4) {
+        setBuildRace(notesParts[1]);
+      } else {
+        setBuildRace('Human');
+      }
     }
     
-    // Set default values for abilities, class levels, and equipment
-    // In a full implementation, these would be stored in the build object
-    setAbilityScores({
-      strength: 15,
-      dexterity: 14,
-      constitution: 13,
-      intelligence: 12,
-      wisdom: 10,
-      charisma: 8,
-    });
-    setClassLevels([{
-      class: 'fighter',
-      level: build.level,
-      hitDie: 10,
-      subclass: '',
-    }]);
-    setEquipment({
-      mainHand: null,
-      offHand: null,
-      armor: null,
-      accessories: []
-    });
+    if (build.background) {
+      setBuildBackground(build.background);
+    } else {
+      // Fall back to parsing notes or default
+      const notesParts = build.notes?.match(/^(\w+)\s+(.*?)\s+\((.+)\)$/) || [];
+      if (notesParts.length >= 4) {
+        setBuildBackground(notesParts[3]);
+      } else {
+        setBuildBackground('Soldier');
+      }
+    }
+    
+    // Load ability scores or use defaults
+    if (build.abilityScores) {
+      setAbilityScores({ ...build.abilityScores });
+    } else {
+      setAbilityScores({
+        strength: 15,
+        dexterity: 14,
+        constitution: 13,
+        intelligence: 12,
+        wisdom: 10,
+        charisma: 8,
+      });
+    }
+    
+    // Load class levels or create from build level
+    if (build.classLevels && build.classLevels.length > 0) {
+      setClassLevels(build.classLevels.map(cl => ({ ...cl })));
+    } else {
+      // Fall back to single class at build level
+      setClassLevels([{
+        class: 'fighter',
+        level: build.level,
+        hitDie: 10,
+        subclass: '',
+      }]);
+    }
+    
+    // Load equipment or use defaults
+    if (build.equipment) {
+      setEquipment({
+        mainHand: build.equipment.mainHand ? { ...build.equipment.mainHand } : null,
+        offHand: build.equipment.offHand ? { ...build.equipment.offHand } : null,
+        armor: build.equipment.armor ? { ...build.equipment.armor } : null,
+        accessories: build.equipment.accessories ? [...build.equipment.accessories] : []
+      });
+    } else {
+      setEquipment({
+        mainHand: null,
+        offHand: null,
+        armor: null,
+        accessories: []
+      });
+    }
     
     setIsCreating(true);
     setActiveTab('basics');
@@ -324,6 +373,17 @@ export const SimpleBuildLab: React.FC = () => {
       attackBonus: calculateAttackBonus(),
       damage: calculateDamage(),
       notes: `${buildRace} ${classNames} (${buildBackground})`,
+      // Store detailed character data for future editing
+      race: buildRace,
+      background: buildBackground,
+      abilityScores: { ...abilityScores },
+      classLevels: classLevels.map(cl => ({ ...cl })),
+      equipment: {
+        mainHand: equipment.mainHand ? { ...equipment.mainHand } : null,
+        offHand: equipment.offHand ? { ...equipment.offHand } : null,
+        armor: equipment.armor ? { ...equipment.armor } : null,
+        accessories: equipment.accessories ? [...equipment.accessories] : []
+      }
     };
 
     updateBuild(editingBuild.id, updatedData);
