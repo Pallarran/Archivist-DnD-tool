@@ -8,15 +8,7 @@ import { useSimpleStore, type SimpleBuild } from '../store/simpleStore';
 import { BasicAbilityScoreForm, type AbilityScores } from '../components/forms/BasicAbilityScoreForm';
 import { ClassLevelForm } from '../components/forms/ClassLevelForm';
 import { EquipmentForm } from '../components/forms/EquipmentForm';
-import type { Equipment } from '../types/build';
-
-// Class level interface for Build Lab
-interface ClassLevel {
-  class: string;
-  level: number;
-  hitDie?: number;
-  subclass?: string;
-}
+import type { Equipment, ClassLevel } from '../types/build';
 
 // Extended build interface for Build Lab
 interface DetailedBuild {
@@ -256,12 +248,12 @@ export const SimpleBuildLab: React.FC = () => {
       race: buildRace,
       background: buildBackground,
       abilityScores: { ...abilityScores },
-      classLevels: classLevels.map(cl => ({ ...cl })),
+      classLevels: [...classLevels],
       equipment: {
-        mainHand: equipment.mainHand ? { ...equipment.mainHand } : null,
-        offHand: equipment.offHand ? { ...equipment.offHand } : null,
-        armor: equipment.armor ? { ...equipment.armor } : null,
-        accessories: equipment.accessories ? [...equipment.accessories] : []
+        mainHand: equipment.mainHand,
+        offHand: equipment.offHand,
+        armor: equipment.armor,
+        accessories: equipment.accessories || []
       }
     };
 
@@ -322,7 +314,7 @@ export const SimpleBuildLab: React.FC = () => {
     
     // Load class levels or create from build level
     if (build.classLevels && build.classLevels.length > 0) {
-      setClassLevels(build.classLevels.map(cl => ({ ...cl })));
+      setClassLevels([...build.classLevels]);
     } else {
       // Fall back to single class at build level
       setClassLevels([{
@@ -336,10 +328,10 @@ export const SimpleBuildLab: React.FC = () => {
     // Load equipment or use defaults
     if (build.equipment) {
       setEquipment({
-        mainHand: build.equipment.mainHand ? { ...build.equipment.mainHand } : null,
-        offHand: build.equipment.offHand ? { ...build.equipment.offHand } : null,
-        armor: build.equipment.armor ? { ...build.equipment.armor } : null,
-        accessories: build.equipment.accessories ? [...build.equipment.accessories] : []
+        mainHand: build.equipment.mainHand || null,
+        offHand: build.equipment.offHand || null,
+        armor: build.equipment.armor || null,
+        accessories: build.equipment.accessories || []
       });
     } else {
       setEquipment({
@@ -377,12 +369,12 @@ export const SimpleBuildLab: React.FC = () => {
       race: buildRace,
       background: buildBackground,
       abilityScores: { ...abilityScores },
-      classLevels: classLevels.map(cl => ({ ...cl })),
+      classLevels: [...classLevels],
       equipment: {
-        mainHand: equipment.mainHand ? { ...equipment.mainHand } : null,
-        offHand: equipment.offHand ? { ...equipment.offHand } : null,
-        armor: equipment.armor ? { ...equipment.armor } : null,
-        accessories: equipment.accessories ? [...equipment.accessories] : []
+        mainHand: equipment.mainHand,
+        offHand: equipment.offHand,
+        armor: equipment.armor,
+        accessories: equipment.accessories || []
       }
     };
 

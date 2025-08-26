@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Equipment, ClassLevel } from '../types/build';
 
 // Basic Build interface - extended to store detailed character data
 export interface SimpleBuild {
@@ -27,18 +28,8 @@ export interface SimpleBuild {
     wisdom: number;
     charisma: number;
   };
-  classLevels?: Array<{
-    class: string;
-    level: number;
-    hitDie?: number;
-    subclass?: string;
-  }>;
-  equipment?: {
-    mainHand?: any;
-    offHand?: any;
-    armor?: any;
-    accessories?: any[];
-  };
+  classLevels?: ClassLevel[];
+  equipment?: Equipment;
 }
 
 // Notification interface
