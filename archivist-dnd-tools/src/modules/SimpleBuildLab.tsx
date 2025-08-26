@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useSimpleStore } from '../store/simpleStore';
+import { useSimpleStore, type SimpleBuild } from '../store/simpleStore';
 import { BasicAbilityScoreForm, type AbilityScores } from '../components/forms/BasicAbilityScoreForm';
 import { ClassLevelForm } from '../components/forms/ClassLevelForm';
 import { EquipmentForm } from '../components/forms/EquipmentForm';
@@ -39,10 +39,11 @@ export const SimpleBuildLab: React.FC = () => {
   // Store integration
   const builds = useSimpleStore((state) => state.builds);
   const selectedBuild = useSimpleStore((state) => state.getSelectedBuild());
-  const { addBuild, updateBuild, selectBuild, addNotification } = useSimpleStore();
+  const { addBuild, updateBuild, deleteBuild, selectBuild, addNotification } = useSimpleStore();
 
-  // Build creation state
+  // Build creation/editing state
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [editingBuild, setEditingBuild] = useState<SimpleBuild | null>(null);
   const [activeTab, setActiveTab] = useState<'basics' | 'abilities' | 'classes' | 'equipment'>('basics');
   
   // Form state
@@ -255,7 +256,91 @@ export const SimpleBuildLab: React.FC = () => {
 
     addBuild(newBuild);
 
-    // Reset form
+    // Reset form using the same function as cancel
+    handleCancelEdit();
+
+    addNotification({
+      type: 'success',
+      message: `Character "${newBuild.name}" created successfully!`,
+    });
+  };
+
+  // Start editing an existing build
+  const handleEditBuild = (build: SimpleBuild) => {
+    setEditingBuild(build);
+    setBuildName(build.name);
+    
+    // Parse notes to extract race, class info, and background
+    // Notes format: "Human fighter 1 (Soldier)"
+    const notesParts = build.notes?.match(/^(\w+)\s+(.*?)\s+\((.+)\)$/) || [];
+    if (notesParts.length >= 4) {
+      setBuildRace(notesParts[1]);
+      setBuildBackground(notesParts[3]);
+    }
+    
+    // Set default values for abilities, class levels, and equipment
+    // In a full implementation, these would be stored in the build object
+    setAbilityScores({
+      strength: 15,
+      dexterity: 14,
+      constitution: 13,
+      intelligence: 12,
+      wisdom: 10,
+      charisma: 8,
+    });
+    setClassLevels([{
+      class: 'fighter',
+      level: build.level,
+      hitDie: 10,
+      subclass: '',
+    }]);
+    setEquipment({
+      mainHand: null,
+      offHand: null,
+      armor: null,
+      accessories: []
+    });
+    
+    setIsCreating(true);
+    setActiveTab('basics');
+  };
+
+  // Update existing build
+  const handleUpdateBuild = () => {
+    if (!editingBuild || !buildName.trim()) {
+      addNotification({
+        type: 'error',
+        message: 'Build name is required',
+      });
+      return;
+    }
+
+    const totalLevel = getTotalLevel();
+    const classNames = classLevels.map(cl => `${cl.class} ${cl.level}`).join('/');
+    
+    const updatedData = {
+      name: buildName.trim(),
+      level: totalLevel,
+      attackBonus: calculateAttackBonus(),
+      damage: calculateDamage(),
+      notes: `${buildRace} ${classNames} (${buildBackground})`,
+    };
+
+    updateBuild(editingBuild.id, updatedData);
+    handleCancelEdit();
+
+    addNotification({
+      type: 'success',
+      message: `Character "${updatedData.name}" updated successfully!`,
+    });
+  };
+
+  // Cancel editing/creating
+  const handleCancelEdit = () => {
+    setEditingBuild(null);
+    setIsCreating(false);
+    setActiveTab('basics');
+    // Reset form values
     setBuildName('');
     setBuildRace('Human');
     setBuildBackground('Soldier');
@@ -279,13 +364,13 @@ export const SimpleBuildLab: React.FC = () => {
       armor: null,
       accessories: []
     });
-    setIsCreating(false);
-    setActiveTab('basics');
+  };
 
-    addNotification({
-      type: 'success',
-      message: `Character "${newBuild.name}" created successfully!`,
-    });
+  // Delete build with confirmation
+  const handleDeleteBuild = (build: SimpleBuild) => {
+    if (window.confirm(`Are you sure you want to delete "${build.name}"? This action cannot be undone.`)) {
+      deleteBuild(build.id);
+    }
   };
 
   // Update calculations when relevant data changes
@@ -309,22 +394,24 @@ export const SimpleBuildLab: React.FC = () => {
         </h2>
         <div className="flex space-x-2">
           <button
-            onClick={() => setIsCreating(!isCreating)}
+            onClick={() => isCreating || editingBuild ? handleCancelEdit() : setIsCreating(true)}
             className={`px-4 py-2 rounded-md text-sm font-medium ${
-              isCreating
+              isCreating || editingBuild
                 ? 'bg-gray-600 text-white hover:bg-gray-700'
                 : 'bg-green-600 text-white hover:bg-green-700'
             }`}
           >
-            {isCreating ? 'Cancel' : 'New Character'}
+            {isCreating || editingBuild ? 'Cancel' : 'New Character'}
           </button>
         </div>
       </div>
 
-      {/* Character Creation Form */}
-      {isCreating && (
+      {/* Character Creation/Editing Form */}
+      {(isCreating || editingBuild) && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create New Character</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {editingBuild ? `Edit Character: ${editingBuild.name}` : 'Create New Character'}
+          </h3>
           
           {/* Tab Navigation */}
           <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
@@ -454,17 +541,17 @@ export const SimpleBuildLab: React.FC = () => {
           {/* Form Actions */}
           <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
             <button
-              onClick={() => setIsCreating(false)}
+              onClick={handleCancelEdit}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500"
             >
               Cancel
             </button>
             <button
-              onClick={handleCreateBuild}
+              onClick={editingBuild ? handleUpdateBuild : handleCreateBuild}
               disabled={!buildName.trim()}
               className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create Character
+              {editingBuild ? 'Update Character' : 'Create Character'}
             </button>
           </div>
         </div>
@@ -478,34 +565,62 @@ export const SimpleBuildLab: React.FC = () => {
             {builds.map((build) => (
               <div
                 key={build.id}
-                className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                className={`p-4 rounded-lg border transition-colors ${
                   selectedBuild?.id === build.id
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                 }`}
-                onClick={() => selectBuild(build.id)}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-medium text-gray-900 dark:text-white truncate">{build.name}</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">Lv.{build.level}</span>
-                </div>
-                
-                {build.notes && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{build.notes}</p>
-                )}
-                
-                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                  <div>Attack: +{build.attackBonus} • Damage: {build.damage}</div>
-                  <div>Created: {new Date(build.createdAt).toLocaleDateString()}</div>
-                </div>
-                
-                {selectedBuild?.id === build.id && (
-                  <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
-                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                      ✓ Selected for DPR Calculator
-                    </span>
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => selectBuild(build.id)}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-medium text-gray-900 dark:text-white truncate">{build.name}</h4>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">Lv.{build.level}</span>
                   </div>
-                )}
+                  
+                  {build.notes && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{build.notes}</p>
+                  )}
+                  
+                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    <div>Attack: +{build.attackBonus} • Damage: {build.damage}</div>
+                    <div>Created: {new Date(build.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  
+                  {selectedBuild?.id === build.id && (
+                    <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                      <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                        ✓ Selected for DPR Calculator
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end space-x-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditBuild(build);
+                    }}
+                    className="px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                    title="Edit build"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteBuild(build);
+                    }}
+                    className="px-3 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                    title="Delete build"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
