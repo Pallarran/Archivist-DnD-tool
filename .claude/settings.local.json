@@ -16,7 +16,13 @@
       "Bash(npm run test:*)",
       "Bash(git remote add:*)",
       "Bash(git push:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(npx @vite-pwa/assets-generator:*)",
+      "Bash(npx vite build:*)",
+      "Bash(git remote set-url:*)",
+      "WebFetch(domain:pallarran.github.io)",
+      "WebFetch(domain:github.com)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": [],

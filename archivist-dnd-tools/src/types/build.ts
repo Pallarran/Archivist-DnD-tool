@@ -110,3 +110,61 @@ export interface CombatContext {
   targetActions: string[];
   targetConditions: string[];
 }
+
+// Class progression data structures
+export interface ClassFeature {
+  name: string;
+  description: string;
+  level: number;
+  class: string;
+  subclass?: string;
+  category: 'core' | 'subclass' | 'asi' | 'spell';
+}
+
+export interface SpellSlotProgression {
+  level: number;
+  1?: number;
+  2?: number;
+  3?: number;
+  4?: number;
+  5?: number;
+  6?: number;
+  7?: number;
+  8?: number;
+  9?: number;
+}
+
+export interface ClassProgression {
+  class: string;
+  hitDie: number;
+  primaryAbility: string[];
+  savingThrowProficiencies: string[];
+  skillChoices: number;
+  availableSkills: string[];
+  weaponProficiencies: string[];
+  armorProficiencies: string[];
+  features: ClassFeature[];
+  spellSlots?: SpellSlotProgression[];
+  attacksPerAction: { level: number; attacks: number }[];
+  proficiencyBonus: { level: number; bonus: number }[];
+}
+
+export interface LevelAnalysis {
+  level: number;
+  proficiencyBonus: number;
+  hitPointsAverage: number;
+  hitPointsMax: number;
+  attacksPerAction: number;
+  spellSlots: Record<string, number>;
+  dpr: {
+    normal: number;
+    advantage: number;
+    disadvantage: number;
+  };
+  features: ClassFeature[];
+  breakpoints: {
+    majorFeature?: string;
+    spellLevel?: number;
+    asi?: boolean;
+  };
+}

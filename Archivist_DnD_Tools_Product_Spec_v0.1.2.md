@@ -1,7 +1,9 @@
-# Archivist DnD Tools — Product Spec v0.1.1
+# Archivist DnD Tools — Product Spec v0.1.2
 
 ## 1) Vision & Scope
 **Goal:** A joyful, rigorous optimizer for D&D 5e (2014-era rules + pre‑2024 supplements) that helps players design, compare, and simulate character builds—without spreadsheet gymnastics.
+
+**Distribution:** The app lives in a **GitHub repository** and is **accessible in any modern browser** as a **static PWA** (Progressive Web App) deployed via **GitHub Pages**.
 
 **MVP Modules**
 - **DPR Simulator** (flagship): side‑by‑side comparison of up to **3 builds**, **3‑round combat timeline**, support for attacks, spells, features, feats, buffs/debuffs, crit mechanics, once‑per‑turn effects, and on‑turn/off‑turn actions.
@@ -14,7 +16,7 @@
 - **Complete class & subclass coverage:** select **any** 2014‑era class/subclass; arbitrary multiclassing up to total level 20 with per‑source toggles and prerequisites enforced.
 - **Deterministic math + policy-driven simulation:** analytic formulas for hit/crit/save plus Monte Carlo mode for complex triggers. Player intent encoded with **policies** (e.g., “smite on crit”, “use -5/+10 if EV ≥ X”).
 - **Explainable outputs:** every number is clickable to a breakdown (probabilities, dice EVs, advantage math, once‑per‑turn logic).
-- **Portable:** PWA for desktop/mobile. Offline-first with local saves.
+- **Portable & browser‑native:** PWA that runs fully client‑side, installable on desktop/mobile, offline‑first with local saves.
 
 ## 3) User Personas
 - **Optimizer**: min‑maxer comparing Sharpshooter vs. non‑SS lines at various ACs.
@@ -145,9 +147,24 @@ This affords homebrew by adding new effect objects—no core math rewrite.
 - **Frontend:** React + TypeScript, Zustand for state, Zod schemas, Vite build.
 - **Math core:** pure TS library (tree‑shakeable), with wasm option later for Monte Carlo speed.
 - **Data:** localStorage + optional file exports; PWA installable.
+- **Hosting:** **GitHub Pages** (static site). SPA‑safe routing via `index.html` + `404.html` fallback. Vite `base` configured to `"/<repo-name>/"` for asset paths.
+- **CI/CD:** GitHub Actions workflow to build (`npm ci && npm run build`) and deploy the `dist/` folder to Pages on push to `main`.
 - **Testing:** Vitest for unit tests; golden‑case tests that mirror known spreadsheet scenarios; property tests for probability invariants.
 
-## 11) Validation Suite (golden cases)
+## 11) Deployment & Repository — Browser Access
+- **Repo layout**
+  - `/src` (React/TS app), `/public` (favicon, manifest, icons), `/index.html`, `/404.html` (SPA fallback), `vite.config.ts` (with `base`), `package.json`.
+- **Pages configuration**
+  - Enable **GitHub Pages** (Build and deployment → GitHub Actions).
+  - Workflow at `.github/workflows/pages.yml` builds and uploads `dist/` artifact, then deploys to Pages.
+- **Routing**
+  - SPA fallback with `404.html` copied from `index.html` to handle deep links.
+- **PWA**
+  - Web app manifest + service worker (workbox or Vite plugin) for offline cache and install prompt.
+- **Environment**
+  - No server‑side secrets; everything client‑side. Optional, user‑provided JSON imports remain local.
+
+## 12) Validation Suite (golden cases)
 - Basic weapon attack vs. AC 10–22 (no features).
 - Advantage/disadvantage & Elven Accuracy sanity.
 - Bless/Bane/Bardic Inspiration correctness tables.
@@ -156,8 +173,9 @@ This affords homebrew by adding new effect objects—no core math rewrite.
 - Power‑attack EV switching thresholds by AC.
 - Crit‑triggered bonus action (GWM) vs. baseline bonus action.
 
-## 12) Roadmap
+## 13) Roadmap
 **MVP (Weeks 1–3)**
+- Repo bootstrapped with Vite + React + TS; Pages workflow; PWA skeleton.
 - Build object + Library skeleton; deterministic DPR for weapons; 3‑column UI; Target Panel; basic policies; JSON import/export.
 - **Leveling DPR Explorer (basic):** per‑level DPR from 1–20 using core weapon math and feature timelines.
 
@@ -172,24 +190,25 @@ This affords homebrew by adding new effect objects—no core math rewrite.
 **v0.4**
 - Encounter Packs (common buff suites), multiple enemies, party synergy toggles; export to PNG/PDF.
 
-## 13) Risks & Non‑Goals
+## 14) Risks & Non‑Goals
 - **Licensing/content:** ship only SRD‑safe data; user-provided compendium details via imports.
 - **System scope:** pre‑2024 rules only; future module can add 2024 variants behind a flag.
+- **Infra:** no backend service; Pages‑only static hosting by design.
 
-## 14) Nice‑to‑Haves
+## 15) Nice‑to‑Haves
 - Import from common builders (JSON), if user supplies.
 - “Breakpoint Finder” (e.g., Dex 18→20 vs. Feat X; DPR and control deltas).
 - “Shield math” (expected hits prevented per reaction for defense compare).
 
-## 15) Example Targets & Presets
+## 16) Example Targets & Presets
 - Humanoid AC bands (12/14/16/18/20/22).
 - Classic dummies: Low-save Brute, High-DEX Skirmisher, Magic-Resistant Elite.
 
-## 16) Instrumentation
+## 17) Instrumentation
 - Exportable **trace logs** per sim run (for bug reports & verifiability).
 
-## 17) Accessibility & i18n
+## 18) Accessibility & i18n
 - Keyboard-nav, aria labels, color‑safe charts, number formats.
 
 ---
-**Next step**: turn this into a clickable React mock with the three‑column simulator, Leveling Explorer, and AC sensitivity micro‑graphs for two example builds.
+**Next step**: stand up the GitHub repo scaffold (Vite PWA + Pages workflow), then prototype the three‑column simulator and Leveling Explorer for real‑browser testing.

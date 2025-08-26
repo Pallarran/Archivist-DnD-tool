@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 const navItems = [
   { path: '/dpr-simulator', label: 'DPR Simulator', key: 'dpr' },
   { path: '/build-lab', label: 'Build Lab', key: 'buildLab' },
+  { path: '/leveling-explorer', label: 'Leveling Explorer', key: 'levelingExplorer' },
 ] as const;
 
 export const Navigation: React.FC = () => {
