@@ -3,7 +3,13 @@
  */
 
 import React, { useState } from 'react';
-import type { ClassLevel } from '../../types';
+
+interface ClassLevel {
+  class: string;
+  level: number;
+  hitDie?: number;
+  subclass?: string;
+}
 
 interface ClassLevelFormProps {
   levels: ClassLevel[];

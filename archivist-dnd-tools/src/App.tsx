@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { EnhancedDPRSimulator } from './modules/EnhancedDPRSimulator';
-import { BuildLab } from './modules/build-lab/BuildLab';
+import { SimpleBuildLab } from './modules/SimpleBuildLab';
 
 function App() {
   return (
@@ -10,7 +10,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/dpr-simulator" replace />} />
           <Route path="/dpr-simulator" element={<EnhancedDPRSimulator />} />
-          <Route path="/build-lab" element={<BuildLab />} />
+          <Route path="/build-lab" element={<SimpleBuildLab />} />
         </Route>
       </Routes>
     </Router>
