@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub Pages Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #f0f8ff;
+        }
+        .status { 
+            background: #d4edda; 
+            color: #155724; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 20px 0; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🎲 Archivist D&D Tools - Root Test</h1>
+    <div class="status">
+        <strong>✅ SUCCESS: GitHub Pages is working!</strong>
+    </div>
+    <p>This file is at the repository root level. If you can see this, GitHub Pages deployment is functioning.</p>
+    <p><strong>Timestamp:</strong> <span id="time"></span></p>
+    <p><strong>Location:</strong> <span id="location"></span></p>
+    
+    <h3>🔍 Debugging Info:</h3>
+    <ul>
+        <li>File location: /simple-test.html (repository root)</li>
+        <li>Expected React app: https://pallarran.github.io/Archivist-DnD-tool/</li>
+        <li>Test page in public: https://pallarran.github.io/Archivist-DnD-tool/test.html</li>
+    </ul>
+    
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleString();
+        document.getElementById('location').textContent = window.location.href;
+    </script>
+</body>
+</html>
