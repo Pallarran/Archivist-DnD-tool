@@ -2,7 +2,7 @@
  * Equipment selection form component
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Build, Weapon, Armor } from '../../types';
 
 interface EquipmentFormProps {
@@ -76,6 +76,19 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
   const [magicWeaponBonus, setMagicWeaponBonus] = useState<number>(0);
   const [magicArmorBonus, setMagicArmorBonus] = useState<number>(0);
   const [hasShield, setHasShield] = useState<boolean>(false);
+
+  // Initialize magic bonuses from existing equipment
+  useEffect(() => {
+    if (equipment.mainHand?.magic) {
+      setMagicWeaponBonus(equipment.mainHand.magic);
+    } else if (equipment.offHand?.magic) {
+      setMagicWeaponBonus(equipment.offHand.magic);
+    }
+    
+    if (equipment.armor?.magic) {
+      setMagicArmorBonus(equipment.armor.magic);
+    }
+  }, [equipment.mainHand, equipment.offHand, equipment.armor]);
 
   const updateMainHand = (weapon: Weapon | null) => {
     if (weapon && magicWeaponBonus > 0) {
@@ -389,18 +402,41 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
                 Other Magic Items
               </label>
               <div className="space-y-2">
-                <div className="flex items-center">
-                  <input id="bracers-archery" type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <label htmlFor="bracers-archery" className="ml-2 text-sm text-gray-700">Bracers of Archery (+2 damage with ranged weapons)</label>
-                </div>
-                <div className="flex items-center">
-                  <input id="belt-giant-str" type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <label htmlFor="belt-giant-str" className="ml-2 text-sm text-gray-700">Belt of Giant Strength (Set Strength to 21-29)</label>
-                </div>
-                <div className="flex items-center">
-                  <input id="gauntlets-ogre" type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <label htmlFor="gauntlets-ogre" className="ml-2 text-sm text-gray-700">Gauntlets of Ogre Power (Strength 19)</label>
-                </div>
+                {[
+                  { id: 'bracers-archery', name: 'Bracers of Archery', description: '+2 damage with ranged weapons' },
+                  { id: 'belt-giant-str', name: 'Belt of Giant Strength', description: 'Set Strength to 21-29' },
+                  { id: 'gauntlets-ogre', name: 'Gauntlets of Ogre Power', description: 'Strength 19' },
+                  { id: 'ring-protection', name: 'Ring of Protection', description: '+1 AC and saving throws' },
+                  { id: 'amulet-health', name: 'Amulet of Health', description: 'Constitution 19' },
+                ].map((item) => {
+                  const isChecked = equipment.accessories?.some(acc => acc.name === item.name) || false;
+                  return (
+                    <div key={item.id} className="flex items-center">
+                      <input 
+                        id={item.id} 
+                        type="checkbox" 
+                        checked={isChecked}
+                        onChange={(e) => {
+                          let newAccessories = equipment.accessories || [];
+                          if (e.target.checked) {
+                            // Add accessory if not already present
+                            if (!newAccessories.some(acc => acc.name === item.name)) {
+                              newAccessories = [...newAccessories, { name: item.name, properties: [item.description] }];
+                            }
+                          } else {
+                            // Remove accessory
+                            newAccessories = newAccessories.filter(acc => acc.name !== item.name);
+                          }
+                          onChange({ ...equipment, accessories: newAccessories });
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                      />
+                      <label htmlFor={item.id} className="ml-2 text-sm text-gray-700">
+                        {item.name} ({item.description})
+                      </label>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

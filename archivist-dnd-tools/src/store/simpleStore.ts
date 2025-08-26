@@ -28,6 +28,7 @@ export interface SimpleBuild {
     wisdom: number;
     charisma: number;
   };
+  abilityScoreMethod?: 'pointBuy' | 'standardArray' | 'manual';
   classLevels?: ClassLevel[];
   equipment?: Equipment;
 }

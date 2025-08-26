@@ -18,6 +18,8 @@ export interface AbilityScores {
 interface BasicAbilityScoreFormProps {
   scores: AbilityScores;
   onChange: (scores: AbilityScores) => void;
+  method?: GenerationMethod;
+  onMethodChange?: (method: GenerationMethod) => void;
   className?: string;
 }
 
@@ -46,9 +48,11 @@ const getTotalPointCost = (scores: AbilityScores): number => {
 export const BasicAbilityScoreForm: React.FC<BasicAbilityScoreFormProps> = ({
   scores,
   onChange,
+  method: initialMethod = 'pointBuy',
+  onMethodChange,
   className = '',
 }) => {
-  const [method, setMethod] = useState<GenerationMethod>('pointBuy');
+  const [method, setMethod] = useState<GenerationMethod>(initialMethod);
   const [standardArrayAssignment, setStandardArrayAssignment] = useState<Record<AbilityKey, number>>({
     strength: 15,
     dexterity: 14,
@@ -57,6 +61,17 @@ export const BasicAbilityScoreForm: React.FC<BasicAbilityScoreFormProps> = ({
     wisdom: 10,
     charisma: 8,
   });
+
+  // Update method when prop changes
+  useEffect(() => {
+    setMethod(initialMethod);
+  }, [initialMethod]);
+
+  // Notify parent when method changes
+  const handleMethodChange = (newMethod: GenerationMethod) => {
+    setMethod(newMethod);
+    onMethodChange?.(newMethod);
+  };
 
   // Ability names and descriptions
   const abilities: { key: AbilityKey; name: string; short: string; description: string }[] = [
@@ -135,7 +150,7 @@ export const BasicAbilityScoreForm: React.FC<BasicAbilityScoreFormProps> = ({
         <div className="flex flex-wrap gap-2 mb-4">
           <button
             type="button"
-            onClick={() => setMethod('pointBuy')}
+            onClick={() => handleMethodChange('pointBuy')}
             className={`px-4 py-2 rounded-md text-sm font-medium ${
               method === 'pointBuy'
                 ? 'bg-blue-600 text-white'
@@ -146,7 +161,7 @@ export const BasicAbilityScoreForm: React.FC<BasicAbilityScoreFormProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setMethod('standardArray')}
+            onClick={() => handleMethodChange('standardArray')}
             className={`px-4 py-2 rounded-md text-sm font-medium ${
               method === 'standardArray'
                 ? 'bg-blue-600 text-white'
@@ -157,7 +172,7 @@ export const BasicAbilityScoreForm: React.FC<BasicAbilityScoreFormProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setMethod('manual')}
+            onClick={() => handleMethodChange('manual')}
             className={`px-4 py-2 rounded-md text-sm font-medium ${
               method === 'manual'
                 ? 'bg-blue-600 text-white'

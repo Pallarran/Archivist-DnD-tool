@@ -50,6 +50,7 @@ export const SimpleBuildLab: React.FC = () => {
     wisdom: 10,
     charisma: 8,
   });
+  const [abilityScoreMethod, setAbilityScoreMethod] = useState<'pointBuy' | 'standardArray' | 'manual'>('pointBuy');
   const [classLevels, setClassLevels] = useState<ClassLevel[]>([{
     class: 'fighter',
     level: 1,
@@ -248,6 +249,7 @@ export const SimpleBuildLab: React.FC = () => {
       race: buildRace,
       background: buildBackground,
       abilityScores: { ...abilityScores },
+      abilityScoreMethod,
       classLevels: [...classLevels],
       equipment: {
         mainHand: equipment.mainHand,
@@ -312,6 +314,13 @@ export const SimpleBuildLab: React.FC = () => {
       });
     }
     
+    // Load ability score method or use default
+    if (build.abilityScoreMethod) {
+      setAbilityScoreMethod(build.abilityScoreMethod);
+    } else {
+      setAbilityScoreMethod('manual'); // Default to manual for legacy builds since they had manual entry
+    }
+    
     // Load class levels or create from build level
     if (build.classLevels && build.classLevels.length > 0) {
       setClassLevels([...build.classLevels]);
@@ -369,6 +378,7 @@ export const SimpleBuildLab: React.FC = () => {
       race: buildRace,
       background: buildBackground,
       abilityScores: { ...abilityScores },
+      abilityScoreMethod,
       classLevels: [...classLevels],
       equipment: {
         mainHand: equipment.mainHand,
@@ -404,6 +414,7 @@ export const SimpleBuildLab: React.FC = () => {
       wisdom: 10,
       charisma: 8,
     });
+    setAbilityScoreMethod('pointBuy');
     setClassLevels([{
       class: 'fighter',
       level: 1,
@@ -572,6 +583,8 @@ export const SimpleBuildLab: React.FC = () => {
             <BasicAbilityScoreForm
               scores={abilityScores}
               onChange={setAbilityScores}
+              method={abilityScoreMethod}
+              onMethodChange={setAbilityScoreMethod}
               className="mt-4"
             />
           )}
