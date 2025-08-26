@@ -73,16 +73,28 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
   onChange,
 }) => {
   const [activeSection, setActiveSection] = useState<'weapons' | 'armor' | 'accessories'>('weapons');
+  const [magicWeaponBonus, setMagicWeaponBonus] = useState<number>(0);
+  const [magicArmorBonus, setMagicArmorBonus] = useState<number>(0);
+  const [hasShield, setHasShield] = useState<boolean>(false);
 
   const updateMainHand = (weapon: Weapon | null) => {
+    if (weapon && magicWeaponBonus > 0) {
+      weapon = { ...weapon, magic: magicWeaponBonus };
+    }
     onChange({ ...equipment, mainHand: weapon });
   };
 
   const updateOffHand = (weapon: Weapon | null) => {
+    if (weapon && magicWeaponBonus > 0) {
+      weapon = { ...weapon, magic: magicWeaponBonus };
+    }
     onChange({ ...equipment, offHand: weapon });
   };
 
   const updateArmor = (armor: Armor | null) => {
+    if (armor && magicArmorBonus > 0) {
+      armor = { ...armor, magic: magicArmorBonus };
+    }
     onChange({ ...equipment, armor });
   };
 
@@ -286,8 +298,15 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
               <input
                 id="shield"
                 type="checkbox"
+                checked={hasShield}
+                onChange={(e) => {
+                  setHasShield(e.target.checked);
+                  if (e.target.checked) {
+                    // Clear off-hand when equipping shield
+                    onChange({ ...equipment, offHand: null });
+                  }
+                }}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                // TODO: Implement shield logic
               />
               <label htmlFor="shield" className="ml-2 text-sm text-blue-700">
                 Shield (+2 AC, requires free hand)
@@ -296,6 +315,11 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
             <p className="mt-1 text-xs text-blue-600">
               Cannot be used with two-handed weapons or while dual wielding
             </p>
+            {hasShield && equipment.mainHand?.properties.includes('two-handed') && (
+              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                ⚠️ Warning: Cannot use shield with two-handed weapons
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -313,7 +337,21 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Magic Weapon Bonus
               </label>
-              <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              <select 
+                value={magicWeaponBonus}
+                onChange={(e) => {
+                  const bonus = parseInt(e.target.value);
+                  setMagicWeaponBonus(bonus);
+                  // Update existing weapons with new bonus
+                  if (equipment.mainHand) {
+                    updateMainHand(equipment.mainHand);
+                  }
+                  if (equipment.offHand) {
+                    updateOffHand(equipment.offHand);
+                  }
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
                 <option value="0">No bonus</option>
                 <option value="1">+1 Magic Weapon</option>
                 <option value="2">+2 Magic Weapon</option>
@@ -326,7 +364,18 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Magic Armor Bonus
               </label>
-              <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              <select 
+                value={magicArmorBonus}
+                onChange={(e) => {
+                  const bonus = parseInt(e.target.value);
+                  setMagicArmorBonus(bonus);
+                  // Update existing armor with new bonus
+                  if (equipment.armor) {
+                    updateArmor(equipment.armor);
+                  }
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
                 <option value="0">No bonus</option>
                 <option value="1">+1 Magic Armor</option>
                 <option value="2">+2 Magic Armor</option>

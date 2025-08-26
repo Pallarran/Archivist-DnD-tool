@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { useSimpleStore } from '../store/simpleStore';
 import { BasicAbilityScoreForm, type AbilityScores } from '../components/forms/BasicAbilityScoreForm';
 import { ClassLevelForm } from '../components/forms/ClassLevelForm';
+import { EquipmentForm } from '../components/forms/EquipmentForm';
+import type { Equipment } from '../types/build';
 
 // Class level interface for Build Lab
 interface ClassLevel {
@@ -61,6 +63,12 @@ export const SimpleBuildLab: React.FC = () => {
     hitDie: 10,
     subclass: '',
   }]);
+  const [equipment, setEquipment] = useState<Equipment>({
+    mainHand: null,
+    offHand: null,
+    armor: null,
+    accessories: []
+  });
 
   // Common D&D races and backgrounds
   const races = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling'];
@@ -74,55 +82,154 @@ export const SimpleBuildLab: React.FC = () => {
   };
   
   const calculateAttackBonus = (): number => {
-    // Simple calculation: proficiency bonus + primary ability modifier
+    // Attack bonus calculation: proficiency bonus + ability modifier + equipment bonus
     const totalLevel = getTotalLevel();
     const proficiencyBonus = Math.ceil(totalLevel / 4) + 1;
     let primaryAbilityMod = 0;
+    let equipmentBonus = 0;
 
+    // Get weapon for primary attack
+    const weapon = equipment.mainHand;
+    
     // Use the first (primary) class for attack bonus calculation
     const primaryClass = classLevels[0]?.class.toLowerCase() || 'fighter';
 
-    // Determine primary ability based on class
-    switch (primaryClass) {
-      case 'barbarian':
-      case 'fighter':
-      case 'paladin':
-        primaryAbilityMod = getAbilityModifier(abilityScores.strength);
-        break;
-      case 'monk':
-      case 'ranger':
-      case 'rogue':
-        primaryAbilityMod = getAbilityModifier(abilityScores.dexterity);
-        break;
-      case 'cleric':
-      case 'druid':
-        primaryAbilityMod = getAbilityModifier(abilityScores.wisdom);
-        break;
-      case 'sorcerer':
-      case 'warlock':
-      case 'bard':
-        primaryAbilityMod = getAbilityModifier(abilityScores.charisma);
-        break;
-      case 'wizard':
-        primaryAbilityMod = getAbilityModifier(abilityScores.intelligence);
-        break;
-      default:
-        primaryAbilityMod = getAbilityModifier(abilityScores.strength);
+    // Determine primary ability based on class and weapon
+    if (weapon && weapon.properties.includes('finesse')) {
+      // Finesse weapons can use Str or Dex - choose the better one
+      primaryAbilityMod = Math.max(
+        getAbilityModifier(abilityScores.strength),
+        getAbilityModifier(abilityScores.dexterity)
+      );
+    } else if (weapon && weapon.type === 'ranged') {
+      // Ranged weapons use Dex
+      primaryAbilityMod = getAbilityModifier(abilityScores.dexterity);
+    } else {
+      // Default class-based ability
+      switch (primaryClass) {
+        case 'barbarian':
+        case 'fighter':
+        case 'paladin':
+          primaryAbilityMod = getAbilityModifier(abilityScores.strength);
+          break;
+        case 'monk':
+        case 'ranger':
+        case 'rogue':
+          primaryAbilityMod = getAbilityModifier(abilityScores.dexterity);
+          break;
+        case 'cleric':
+        case 'druid':
+          primaryAbilityMod = getAbilityModifier(abilityScores.wisdom);
+          break;
+        case 'sorcerer':
+        case 'warlock':
+        case 'bard':
+          primaryAbilityMod = getAbilityModifier(abilityScores.charisma);
+          break;
+        case 'wizard':
+          primaryAbilityMod = getAbilityModifier(abilityScores.intelligence);
+          break;
+        default:
+          primaryAbilityMod = getAbilityModifier(abilityScores.strength);
+      }
     }
 
-    return proficiencyBonus + primaryAbilityMod;
+    // Add equipment bonuses
+    if (weapon?.magic) {
+      equipmentBonus += weapon.magic;
+    }
+    if (weapon?.toHitBonus) {
+      equipmentBonus += weapon.toHitBonus;
+    }
+
+    return proficiencyBonus + primaryAbilityMod + equipmentBonus;
   };
 
   const calculateDamage = (): string => {
-    // Simple damage calculation based on primary class
+    // Damage calculation based on equipped weapon and abilities
+    const weapon = equipment.mainHand;
     const primaryClass = classLevels[0]?.class.toLowerCase() || 'fighter';
-    const abilityMod = getAbilityModifier(
-      ['barbarian', 'fighter', 'paladin'].includes(primaryClass) 
-        ? abilityScores.strength 
-        : abilityScores.dexterity
-    );
     
-    return `1d8+${abilityMod}`;
+    let damageDice = '1d8'; // Default if no weapon
+    let abilityMod = 0;
+    let equipmentBonus = 0;
+    
+    // Get weapon damage dice
+    if (weapon?.damage) {
+      damageDice = weapon.damage;
+    }
+    
+    // Calculate ability modifier for damage
+    if (weapon && weapon.properties.includes('finesse')) {
+      // Finesse weapons can use Str or Dex - choose the better one
+      abilityMod = Math.max(
+        getAbilityModifier(abilityScores.strength),
+        getAbilityModifier(abilityScores.dexterity)
+      );
+    } else if (weapon && weapon.type === 'ranged') {
+      // Ranged weapons use Dex
+      abilityMod = getAbilityModifier(abilityScores.dexterity);
+    } else {
+      // Default class-based ability for damage
+      switch (primaryClass) {
+        case 'barbarian':
+        case 'fighter':
+        case 'paladin':
+          abilityMod = getAbilityModifier(abilityScores.strength);
+          break;
+        case 'monk':
+        case 'ranger':
+        case 'rogue':
+          abilityMod = getAbilityModifier(abilityScores.dexterity);
+          break;
+        default:
+          abilityMod = getAbilityModifier(abilityScores.strength);
+      }
+    }
+    
+    // Add equipment bonuses
+    if (weapon?.magic) {
+      equipmentBonus += weapon.magic;
+    }
+    if (weapon?.damageBonus) {
+      equipmentBonus += weapon.damageBonus;
+    }
+    
+    const totalBonus = abilityMod + equipmentBonus;
+    return totalBonus > 0 ? `${damageDice}+${totalBonus}` : `${damageDice}${totalBonus}`;
+  };
+
+  const calculateArmorClass = (): number => {
+    // AC calculation: base 10 + armor + dex modifier + shield + magic bonuses
+    let baseAC = 10;
+    let armorBonus = 0;
+    let dexMod = getAbilityModifier(abilityScores.dexterity);
+    let shieldBonus = 0;
+    let magicBonus = 0;
+    
+    if (equipment.armor) {
+      armorBonus = equipment.armor.ac;
+      
+      // Apply Dex modifier limits based on armor type
+      if (equipment.armor.type === 'heavy') {
+        dexMod = 0; // Heavy armor doesn't benefit from Dex
+      } else if (equipment.armor.type === 'medium') {
+        dexMod = Math.min(dexMod, 2); // Medium armor caps at +2 Dex
+      }
+      // Light armor uses full Dex modifier
+      
+      if (equipment.armor.magic) {
+        magicBonus += equipment.armor.magic;
+      }
+      
+      // With armor, use armor AC instead of base 10
+      baseAC = 0;
+    }
+    
+    // TODO: Add shield bonus when shield state is properly tracked
+    // This would require passing shield state from EquipmentForm
+    
+    return baseAC + armorBonus + dexMod + shieldBonus + magicBonus;
   };
 
   // Create new build
@@ -166,6 +273,12 @@ export const SimpleBuildLab: React.FC = () => {
       hitDie: 10,
       subclass: '',
     }]);
+    setEquipment({
+      mainHand: null,
+      offHand: null,
+      armor: null,
+      accessories: []
+    });
     setIsCreating(false);
     setActiveTab('basics');
 
@@ -177,8 +290,8 @@ export const SimpleBuildLab: React.FC = () => {
 
   // Update calculations when relevant data changes
   useEffect(() => {
-    // Auto-calculate attack bonus and damage when ability scores or class/level change
-  }, [abilityScores, classLevels]);
+    // Auto-calculate attack bonus and damage when ability scores, class/level, or equipment change
+  }, [abilityScores, classLevels, equipment]);
 
   return (
     <div className="space-y-6">
@@ -292,11 +405,24 @@ export const SimpleBuildLab: React.FC = () => {
                   <strong>{buildName || 'Unnamed Character'}</strong> - Level {getTotalLevel()} {buildRace} {classLevels.map(cl => cl.class).join('/')} ({buildBackground})
                 </p>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                  Attack Bonus: +{calculateAttackBonus()} • Damage: {calculateDamage()}
+                  Attack Bonus: +{calculateAttackBonus()} • Damage: {calculateDamage()} • AC: {calculateArmorClass()}
                 </p>
                 {classLevels.length > 1 && (
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                     Classes: {classLevels.map(cl => `${cl.class} ${cl.level}`).join(', ')}
+                  </p>
+                )}
+                {equipment.mainHand && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Weapon: {equipment.mainHand.name} ({equipment.mainHand.damage} {equipment.mainHand.damageType})
+                  </p>
+                )}
+                {equipment.armor && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Armor: {equipment.armor.name} (AC {equipment.armor.ac}
+                    {equipment.armor.type === 'light' && ' + Dex'}
+                    {equipment.armor.type === 'medium' && ' + Dex (max 2)'}
+                    )
                   </p>
                 )}
               </div>
@@ -319,11 +445,10 @@ export const SimpleBuildLab: React.FC = () => {
           )}
 
           {activeTab === 'equipment' && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              <p className="text-lg">⚔️ Equipment System</p>
-              <p className="text-sm mt-2">Coming in the next update!</p>
-              <p className="text-xs mt-1">Will include weapons, armor, and magic items</p>
-            </div>
+            <EquipmentForm
+              equipment={equipment}
+              onChange={setEquipment}
+            />
           )}
 
           {/* Form Actions */}
