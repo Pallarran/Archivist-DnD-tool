@@ -77,18 +77,31 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
   const [magicArmorBonus, setMagicArmorBonus] = useState<number>(0);
   const [hasShield, setHasShield] = useState<boolean>(false);
 
-  // Initialize magic bonuses from existing equipment
+  // Initialize magic bonuses from existing equipment or accessories
   useEffect(() => {
-    if (equipment.mainHand?.magic) {
+    // Look for magic bonuses stored in accessories array
+    const magicWeaponAccessory = equipment.accessories?.find(acc => acc.name?.includes('Magic Weapon Bonus'));
+    if (magicWeaponAccessory) {
+      const bonusMatch = magicWeaponAccessory.name.match(/\+(\d+)/);
+      if (bonusMatch) {
+        setMagicWeaponBonus(parseInt(bonusMatch[1]));
+      }
+    } else if (equipment.mainHand?.magic) {
       setMagicWeaponBonus(equipment.mainHand.magic);
     } else if (equipment.offHand?.magic) {
       setMagicWeaponBonus(equipment.offHand.magic);
     }
     
-    if (equipment.armor?.magic) {
+    const magicArmorAccessory = equipment.accessories?.find(acc => acc.name?.includes('Magic Armor Bonus'));
+    if (magicArmorAccessory) {
+      const bonusMatch = magicArmorAccessory.name.match(/\+(\d+)/);
+      if (bonusMatch) {
+        setMagicArmorBonus(parseInt(bonusMatch[1]));
+      }
+    } else if (equipment.armor?.magic) {
       setMagicArmorBonus(equipment.armor.magic);
     }
-  }, [equipment.mainHand, equipment.offHand, equipment.armor]);
+  }, [equipment]);
 
   const updateMainHand = (weapon: Weapon | null) => {
     if (weapon && magicWeaponBonus > 0) {
@@ -355,13 +368,26 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
                 onChange={(e) => {
                   const bonus = parseInt(e.target.value);
                   setMagicWeaponBonus(bonus);
+                  
+                  // Store magic weapon bonus in accessories array for persistence
+                  let newAccessories = (equipment.accessories || []).filter(acc => !acc.name?.includes('Magic Weapon Bonus'));
+                  if (bonus > 0) {
+                    newAccessories.push({ 
+                      name: `+${bonus} Magic Weapon Bonus`, 
+                      properties: [`+${bonus} enhancement bonus to attack and damage rolls`] 
+                    });
+                  }
+                  
                   // Update existing weapons with new bonus
+                  const updatedEquipment = { ...equipment, accessories: newAccessories };
                   if (equipment.mainHand) {
-                    updateMainHand(equipment.mainHand);
+                    updatedEquipment.mainHand = { ...equipment.mainHand, magic: bonus > 0 ? bonus : undefined };
                   }
                   if (equipment.offHand) {
-                    updateOffHand(equipment.offHand);
+                    updatedEquipment.offHand = { ...equipment.offHand, magic: bonus > 0 ? bonus : undefined };
                   }
+                  
+                  onChange(updatedEquipment);
                 }}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
@@ -382,10 +408,23 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
                 onChange={(e) => {
                   const bonus = parseInt(e.target.value);
                   setMagicArmorBonus(bonus);
-                  // Update existing armor with new bonus
-                  if (equipment.armor) {
-                    updateArmor(equipment.armor);
+                  
+                  // Store magic armor bonus in accessories array for persistence
+                  let newAccessories = (equipment.accessories || []).filter(acc => !acc.name?.includes('Magic Armor Bonus'));
+                  if (bonus > 0) {
+                    newAccessories.push({ 
+                      name: `+${bonus} Magic Armor Bonus`, 
+                      properties: [`+${bonus} enhancement bonus to AC`] 
+                    });
                   }
+                  
+                  // Update existing armor with new bonus
+                  const updatedEquipment = { ...equipment, accessories: newAccessories };
+                  if (equipment.armor) {
+                    updatedEquipment.armor = { ...equipment.armor, magic: bonus > 0 ? bonus : undefined };
+                  }
+                  
+                  onChange(updatedEquipment);
                 }}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
