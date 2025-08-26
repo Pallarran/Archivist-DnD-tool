@@ -4,11 +4,21 @@ import { getProficiencyBonus, getAttacksPerAction, getSpellSlots, getFeaturesAtL
 export class LevelAnalysisEngine {
   // Calculate DPR analysis for a build at all levels 1-20
   static analyzeBuildProgression(build: Build): LevelAnalysis[] {
+    if (!build || !build.levels || build.levels.length === 0) {
+      console.warn('Invalid build data provided to analyzeBuildProgression');
+      return [];
+    }
+    
     const results: LevelAnalysis[] = [];
     
-    for (let level = 1; level <= 20; level++) {
-      const analysis = this.analyzeBuildAtLevel(build, level);
-      results.push(analysis);
+    try {
+      for (let level = 1; level <= 20; level++) {
+        const analysis = this.analyzeBuildAtLevel(build, level);
+        results.push(analysis);
+      }
+    } catch (error) {
+      console.error('Error in analyzeBuildProgression:', error);
+      return [];
     }
     
     return results;
@@ -16,6 +26,11 @@ export class LevelAnalysisEngine {
 
   // Calculate analysis for a build at a specific level
   static analyzeBuildAtLevel(build: Build, targetLevel: number): LevelAnalysis {
+    // Safety checks
+    if (!build || !build.abilities) {
+      throw new Error('Invalid build object provided');
+    }
+    
     const proficiencyBonus = getProficiencyBonus(targetLevel);
     
     // Calculate effective class levels for multiclass builds
@@ -23,7 +38,8 @@ export class LevelAnalysisEngine {
     const primaryClass = this.getPrimaryClass(classLevels);
     
     // Calculate hit points
-    const { hitPointsAverage, hitPointsMax } = this.calculateHitPoints(classLevels, build.abilities.constitution);
+    const constitution = typeof build.abilities.constitution === 'number' ? build.abilities.constitution : 10;
+    const { hitPointsAverage, hitPointsMax } = this.calculateHitPoints(classLevels, constitution);
     
     // Calculate attacks per action (use highest from any class)
     const attacksPerAction = this.calculateAttacksPerAction(classLevels);
@@ -368,7 +384,9 @@ export class LevelAnalysisEngine {
 
   private static getAbilityModifier(str: number, dex: number): number {
     // Use higher of STR or DEX for damage calculations (simplified)
-    const primaryStat = Math.max(str, dex);
+    const safeStr = typeof str === 'number' && !isNaN(str) ? str : 10;
+    const safeDex = typeof dex === 'number' && !isNaN(dex) ? dex : 10;
+    const primaryStat = Math.max(safeStr, safeDex);
     return Math.floor((primaryStat - 10) / 2);
   }
 
@@ -623,11 +641,15 @@ export class LevelAnalysisEngine {
 
   private static parseDamageString(damage: string): number {
     // Simple damage parsing - in full implementation this would handle complex dice expressions
+    if (!damage || typeof damage !== 'string') return 4.5;
+    
     if (damage.includes('d8')) return 4.5;
     if (damage.includes('d6')) return 3.5;
     if (damage.includes('d10')) return 5.5;
     if (damage.includes('d12')) return 6.5;
     if (damage.includes('d4')) return 2.5;
-    return parseFloat(damage) || 4.5;
+    
+    const parsed = parseFloat(damage);
+    return isNaN(parsed) ? 4.5 : parsed;
   }
 }
