@@ -1,13 +1,8 @@
 import React from 'react';
-import { useUIStore } from '../store';
 
 export const NotificationSystem: React.FC = () => {
-  const { getNotifications, removeNotification } = useUIStore();
-  const notifications = getNotifications();
-
-  if (notifications.length === 0) {
-    return null;
-  }
+  // Temporarily disabled while debugging store issues
+  return null;
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">

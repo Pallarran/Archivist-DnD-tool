@@ -1,21 +1,18 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useUIStore } from '../store';
 
 const navItems = [
-  { path: '/dpr-simulator', label: 'DPR Simulator', key: 'dpr' },
-  // { path: '/leveling-explorer', label: 'Leveling Explorer', key: 'leveling' },
-  // { path: '/character-compare', label: 'Compare', key: 'compare' },
-  { path: '/build-lab', label: 'Build Lab', key: 'buildLab' },
-  // { path: '/library', label: 'Library', key: 'library' },
+  { path: '/test', label: 'Test', key: 'test' },
+  // Temporarily disabled while debugging store issues
+  // { path: '/dpr-simulator', label: 'DPR Simulator', key: 'dpr' },
+  // { path: '/build-lab', label: 'Build Lab', key: 'buildLab' },
 ] as const;
 
 export const Navigation: React.FC = () => {
   const location = useLocation();
-  const { setCurrentModule } = useUIStore();
 
   const handleModuleChange = (module: string) => {
-    setCurrentModule(module as any);
+    console.log('Module changed:', module);
   };
 
   return (
