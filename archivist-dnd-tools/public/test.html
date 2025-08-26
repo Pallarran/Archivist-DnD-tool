@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #28a745;
+            font-size: 18px;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Archivist D&D Tools - Deployment Test</h1>
+        <p class="success">✅ Static HTML is working!</p>
+        <p class="success">✅ GitHub Pages deployment is working!</p>
+        
+        <div class="info">
+            <strong>Test Results:</strong>
+            <ul>
+                <li>Static files: ✅ Working</li>
+                <li>GitHub Pages: ✅ Working</li>
+                <li>Time: <span id="time"></span></li>
+                <li>URL: <span id="url"></span></li>
+            </ul>
+        </div>
+        
+        <p><strong>Next:</strong> If you can see this page, the deployment infrastructure works. The issue is with the React app build or configuration.</p>
+    </div>
+    
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleString();
+        document.getElementById('url').textContent = window.location.href;
+    </script>
+</body>
+</html>
