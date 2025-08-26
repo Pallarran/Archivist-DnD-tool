@@ -8,7 +8,7 @@ import { BuildLab } from './modules/build-lab/BuildLab';
 
 function App() {
   return (
-    <Router basename="/archivist-dnd-tools">
+    <Router basename="/Archivist-DnD-tool">
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/dpr-simulator" replace />} />

@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/archivist-dnd-tools/',
+  base: '/Archivist-DnD-tool/',
   plugins: [
     react(),
     VitePWA({
@@ -17,8 +17,8 @@ export default defineConfig({
         theme_color: '#0f172a',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/archivist-dnd-tools/',
-        scope: '/archivist-dnd-tools/',
+        start_url: '/Archivist-DnD-tool/',
+        scope: '/Archivist-DnD-tool/',
         icons: [
           {
             src: 'pwa-192x192.png',
