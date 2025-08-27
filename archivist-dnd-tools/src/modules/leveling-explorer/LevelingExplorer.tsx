@@ -1,16 +1,106 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSimpleStore } from '../../store/simpleStore';
-import { LevelAnalysis } from '../../types/build';
-import { LevelAnalysisEngine } from '../../utils/levelAnalysis';
+import type { SimpleBuild } from '../../store/simpleStore';
+
+// Simplified interfaces for the working version
+interface SimpleLevelAnalysis {
+  level: number;
+  proficiencyBonus: number;
+  hitPointsAverage: number;
+  attackBonus: number;
+  damage: string;
+  extraAttacks: number;
+  dpr: {
+    normal: number;
+    advantage: number;
+    disadvantage: number;
+  };
+  features: string[];
+}
 
 export const LevelingExplorer: React.FC = () => {
   // Store hooks
   const builds = useSimpleStore((state) => state.builds);
   const { addNotification } = useSimpleStore();
 
+  // Simplified build analysis function
+  const analyzeBuildProgression = (build: SimpleBuild): SimpleLevelAnalysis[] => {
+    if (!build.classLevels || !build.abilityScores) {
+      return [];
+    }
+
+    const results: SimpleLevelAnalysis[] = [];
+    
+    for (let level = 1; level <= 20; level++) {
+      const proficiencyBonus = Math.ceil(level / 4) + 1;
+      
+      // Calculate hit points (simplified)
+      const hitDie = build.classLevels[0]?.hitDie || 8;
+      const conMod = Math.floor((build.abilityScores.constitution - 10) / 2);
+      const hitPointsAverage = Math.max(1, (hitDie / 2 + 0.5) + conMod) + (level - 1) * (hitDie / 2 + 0.5 + conMod);
+      
+      // Calculate attack bonus (simplified)
+      let abilityMod = Math.floor((build.abilityScores.strength - 10) / 2);
+      if (build.equipment?.mainHand?.type === 'ranged') {
+        abilityMod = Math.floor((build.abilityScores.dexterity - 10) / 2);
+      }
+      
+      const attackBonus = proficiencyBonus + abilityMod + (build.equipment?.mainHand?.magic || 0);
+      
+      // Calculate extra attacks
+      let extraAttacks = 0;
+      const fighterLevel = build.classLevels.find(cl => cl.class === 'fighter')?.level || 0;
+      if (fighterLevel >= 20) extraAttacks = 3;
+      else if (fighterLevel >= 11) extraAttacks = 2;
+      else if (fighterLevel >= 5) extraAttacks = 1;
+      else if (['barbarian', 'paladin', 'ranger'].includes(build.classLevels[0]?.class) && level >= 5) {
+        extraAttacks = 1;
+      }
+      
+      // Calculate damage (simplified)
+      const baseDamage = build.equipment?.mainHand?.damage || '1d8';
+      const damage = `${baseDamage}+${abilityMod}${extraAttacks > 0 ? ` (×${extraAttacks + 1} attacks)` : ''}`;
+      
+      // Calculate DPR
+      const parseDamage = (damageStr: string): number => {
+        const match = damageStr.match(/(\d+)d(\d+)(?:\+(\d+))?/);
+        if (match) {
+          const [, numDice, dieSize, bonus] = match;
+          return parseInt(numDice) * (parseInt(dieSize) + 1) / 2 + (parseInt(bonus) || 0);
+        }
+        return 8;
+      };
+      
+      const avgDamage = parseDamage(baseDamage) + abilityMod;
+      const totalAttacks = extraAttacks + 1;
+      const hitChance = Math.max(0.05, Math.min(0.95, (21 - (15 - attackBonus)) / 20)); // vs AC 15
+      
+      const normalDPR = avgDamage * totalAttacks * hitChance;
+      const advantageDPR = avgDamage * totalAttacks * (1 - Math.pow(1 - hitChance, 2));
+      const disadvantageDPR = avgDamage * totalAttacks * Math.pow(hitChance, 2);
+      
+      results.push({
+        level,
+        proficiencyBonus,
+        hitPointsAverage,
+        attackBonus,
+        damage,
+        extraAttacks,
+        dpr: {
+          normal: normalDPR,
+          advantage: advantageDPR,
+          disadvantage: disadvantageDPR
+        },
+        features: [] // TODO: Extract from feature selections
+      });
+    }
+    
+    return results;
+  };
+
   // State
   const [selectedBuilds, setSelectedBuilds] = useState<(string | null)[]>([null, null, null]);
-  const [levelAnalyses, setLevelAnalyses] = useState<Record<string, LevelAnalysis[]>>({});
+  const [levelAnalyses, setLevelAnalyses] = useState<Record<string, SimpleLevelAnalysis[]>>({});
   const [advantageState, setAdvantageState] = useState<'normal' | 'advantage' | 'disadvantage'>('normal');
   const [showPowerAttack, setShowPowerAttack] = useState<boolean>(false);
   const [currentLevel, setCurrentLevel] = useState<number>(20);
@@ -20,13 +110,21 @@ export const LevelingExplorer: React.FC = () => {
 
   // Calculate level analyses when builds change
   useEffect(() => {
-    const analyses: Record<string, LevelAnalysis[]> = {};
+    const analyses: Record<string, SimpleLevelAnalysis[]> = {};
     
     selectedBuilds.forEach(buildId => {
       if (buildId) {
-        const build = builds.find(b => b.id === buildId);
-        if (build) {
-          analyses[buildId] = LevelAnalysisEngine.analyzeBuildProgression(build);
+        const simpleBuild = builds.find(b => b.id === buildId);
+        if (simpleBuild) {
+          try {
+            analyses[buildId] = analyzeBuildProgression(simpleBuild);
+          } catch (error) {
+            console.error(`Error analyzing build ${simpleBuild.name}:`, error);
+            addNotification({
+              type: 'error',
+              message: `Failed to analyze build "${simpleBuild.name}". Please check build data.`
+            });
+          }
         }
       }
     });
