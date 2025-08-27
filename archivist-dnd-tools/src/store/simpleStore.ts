@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Equipment, ClassLevel } from '../types/build';
+import type { FeatureSelection } from '../components/forms/ClassFeatureDisplay';
 
 // Basic Build interface - extended to store detailed character data
 export interface SimpleBuild {
@@ -31,6 +32,7 @@ export interface SimpleBuild {
   abilityScoreMethod?: 'pointBuy' | 'standardArray' | 'manual';
   classLevels?: ClassLevel[];
   equipment?: Equipment;
+  featureSelections?: { [featureId: string]: FeatureSelection };
 }
 
 // Notification interface

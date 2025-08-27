@@ -8,6 +8,7 @@ import { useSimpleStore, type SimpleBuild } from '../store/simpleStore';
 import { BasicAbilityScoreForm, type AbilityScores } from '../components/forms/BasicAbilityScoreForm';
 import { ClassLevelForm } from '../components/forms/ClassLevelForm';
 import { EquipmentForm } from '../components/forms/EquipmentForm';
+import { ClassFeatureDisplay, type FeatureSelection } from '../components/forms/ClassFeatureDisplay';
 import type { Equipment, ClassLevel } from '../types/build';
 
 // Extended build interface for Build Lab
@@ -36,7 +37,7 @@ export const SimpleBuildLab: React.FC = () => {
   // Build creation/editing state
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [editingBuild, setEditingBuild] = useState<SimpleBuild | null>(null);
-  const [activeTab, setActiveTab] = useState<'basics' | 'abilities' | 'classes' | 'equipment'>('basics');
+  const [activeTab, setActiveTab] = useState<'basics' | 'abilities' | 'classes' | 'equipment' | 'features'>('basics');
   
   // Form state
   const [buildName, setBuildName] = useState<string>('');
@@ -63,6 +64,7 @@ export const SimpleBuildLab: React.FC = () => {
     armor: null,
     accessories: []
   });
+  const [featureSelections, setFeatureSelections] = useState<{ [featureId: string]: FeatureSelection }>({});
 
   // Common D&D races and backgrounds
   const races = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling'];
@@ -256,7 +258,8 @@ export const SimpleBuildLab: React.FC = () => {
         offHand: equipment.offHand,
         armor: equipment.armor,
         accessories: equipment.accessories || []
-      }
+      },
+      featureSelections: { ...featureSelections }
     };
 
     addBuild(newBuild);
@@ -351,6 +354,13 @@ export const SimpleBuildLab: React.FC = () => {
       });
     }
     
+    // Load feature selections
+    if (build.featureSelections) {
+      setFeatureSelections({ ...build.featureSelections });
+    } else {
+      setFeatureSelections({});
+    }
+    
     setIsCreating(true);
     setActiveTab('basics');
   };
@@ -385,7 +395,8 @@ export const SimpleBuildLab: React.FC = () => {
         offHand: equipment.offHand,
         armor: equipment.armor,
         accessories: equipment.accessories || []
-      }
+      },
+      featureSelections: { ...featureSelections }
     };
 
     updateBuild(editingBuild.id, updatedData);
@@ -427,6 +438,7 @@ export const SimpleBuildLab: React.FC = () => {
       armor: null,
       accessories: []
     });
+    setFeatureSelections({});
   };
 
   // Delete build with confirmation
@@ -482,6 +494,7 @@ export const SimpleBuildLab: React.FC = () => {
               { key: 'basics' as const, label: 'Basics' },
               { key: 'abilities' as const, label: 'Ability Scores' },
               { key: 'classes' as const, label: 'Classes & Levels' },
+              { key: 'features' as const, label: 'Class Features' },
               { key: 'equipment' as const, label: 'Equipment' },
             ].map(({ key, label }) => (
               <button
@@ -593,6 +606,15 @@ export const SimpleBuildLab: React.FC = () => {
             <ClassLevelForm
               levels={classLevels}
               onChange={setClassLevels}
+            />
+          )}
+
+          {activeTab === 'features' && (
+            <ClassFeatureDisplay
+              classLevels={classLevels}
+              selections={featureSelections}
+              onSelectionChange={setFeatureSelections}
+              abilityScores={abilityScores}
             />
           )}
 
