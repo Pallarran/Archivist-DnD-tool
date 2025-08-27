@@ -76,19 +76,61 @@ export const SimpleBuildLab: React.FC = () => {
   const getTotalLevel = (): number => {
     return classLevels.reduce((total, cl) => total + cl.level, 0);
   };
+
+  const getFightingStyles = (): string[] => {
+    const styles: string[] = [];
+    Object.values(featureSelections).forEach(selection => {
+      if (selection.selections) {
+        selection.selections.forEach(selectionId => {
+          // Check if this selection is a fighting style
+          if (['archery', 'defense', 'dueling', 'great-weapon-fighting', 'protection', 'two-weapon-fighting'].includes(selectionId)) {
+            styles.push(selectionId);
+          }
+        });
+      }
+    });
+    return styles;
+  };
+
+  const getExtraAttacks = (): number => {
+    let extraAttacks = 0;
+    classLevels.forEach(classLevel => {
+      const className = classLevel.class.toLowerCase();
+      const level = classLevel.level;
+      
+      // Fighter gets extra attacks at levels 5, 11, and 20
+      if (className === 'fighter') {
+        if (level >= 20) extraAttacks += 3;
+        else if (level >= 11) extraAttacks += 2;
+        else if (level >= 5) extraAttacks += 1;
+      }
+      // Other classes get extra attack at level 5
+      else if (['barbarian', 'paladin', 'ranger'].includes(className) && level >= 5) {
+        extraAttacks += 1;
+      }
+    });
+    return extraAttacks;
+  };
   
   const calculateAttackBonus = (): number => {
-    // Attack bonus calculation: proficiency bonus + ability modifier + equipment bonus
+    // Attack bonus calculation: proficiency bonus + ability modifier + equipment bonus + fighting style bonus
     const totalLevel = getTotalLevel();
     const proficiencyBonus = Math.ceil(totalLevel / 4) + 1;
     let primaryAbilityMod = 0;
     let equipmentBonus = 0;
+    let fightingStyleBonus = 0;
 
     // Get weapon for primary attack
     const weapon = equipment.mainHand;
     
     // Use the first (primary) class for attack bonus calculation
     const primaryClass = classLevels[0]?.class.toLowerCase() || 'fighter';
+
+    // Check for fighting style bonuses
+    const fightingStyles = getFightingStyles();
+    if (fightingStyles.includes('archery') && weapon?.type === 'ranged') {
+      fightingStyleBonus += 2; // Archery fighting style gives +2 to ranged attacks
+    }
 
     // Determine primary ability based on class and weapon
     if (weapon && weapon.properties.includes('finesse')) {
@@ -138,7 +180,7 @@ export const SimpleBuildLab: React.FC = () => {
       equipmentBonus += weapon.toHitBonus;
     }
 
-    return proficiencyBonus + primaryAbilityMod + equipmentBonus;
+    return proficiencyBonus + primaryAbilityMod + equipmentBonus + fightingStyleBonus;
   };
 
   const calculateDamage = (): string => {
@@ -149,6 +191,7 @@ export const SimpleBuildLab: React.FC = () => {
     let damageDice = '1d8'; // Default if no weapon
     let abilityMod = 0;
     let equipmentBonus = 0;
+    let fightingStyleBonus = 0;
     
     // Get weapon damage dice
     if (weapon?.damage) {
@@ -182,6 +225,17 @@ export const SimpleBuildLab: React.FC = () => {
           abilityMod = getAbilityModifier(abilityScores.strength);
       }
     }
+
+    // Check for fighting style damage bonuses
+    const fightingStyles = getFightingStyles();
+    if (fightingStyles.includes('dueling') && weapon && !equipment.offHand) {
+      // Dueling fighting style: +2 damage when wielding one-handed weapon with no other weapons
+      if (weapon.properties.includes('versatile') || weapon.type === 'melee') {
+        fightingStyleBonus += 2;
+      }
+    }
+    // Note: Two-weapon fighting adds ability mod to off-hand attacks, which we don't calculate here
+    // Note: Great weapon fighting allows rerolling 1s and 2s, which is hard to represent as a flat bonus
     
     // Add equipment bonuses
     if (weapon?.magic) {
@@ -191,17 +245,26 @@ export const SimpleBuildLab: React.FC = () => {
       equipmentBonus += weapon.damageBonus;
     }
     
-    const totalBonus = abilityMod + equipmentBonus;
-    return totalBonus > 0 ? `${damageDice}+${totalBonus}` : `${damageDice}${totalBonus}`;
+    const totalBonus = abilityMod + equipmentBonus + fightingStyleBonus;
+    const extraAttacks = getExtraAttacks();
+    const totalAttacks = 1 + extraAttacks;
+    
+    let damageString = totalBonus > 0 ? `${damageDice}+${totalBonus}` : `${damageDice}${totalBonus}`;
+    if (totalAttacks > 1) {
+      damageString += ` (×${totalAttacks} attacks)`;
+    }
+    
+    return damageString;
   };
 
   const calculateArmorClass = (): number => {
-    // AC calculation: base 10 + armor + dex modifier + shield + magic bonuses
+    // AC calculation: base 10 + armor + dex modifier + shield + magic bonuses + fighting style bonuses
     let baseAC = 10;
     let armorBonus = 0;
     let dexMod = getAbilityModifier(abilityScores.dexterity);
     let shieldBonus = 0;
     let magicBonus = 0;
+    let fightingStyleBonus = 0;
     
     if (equipment.armor) {
       armorBonus = equipment.armor.ac;
@@ -222,10 +285,16 @@ export const SimpleBuildLab: React.FC = () => {
       baseAC = 0;
     }
     
+    // Check for fighting style AC bonuses
+    const fightingStyles = getFightingStyles();
+    if (fightingStyles.includes('defense') && equipment.armor) {
+      fightingStyleBonus += 1; // Defense fighting style gives +1 AC while wearing armor
+    }
+    
     // TODO: Add shield bonus when shield state is properly tracked
     // This would require passing shield state from EquipmentForm
     
-    return baseAC + armorBonus + dexMod + shieldBonus + magicBonus;
+    return baseAC + armorBonus + dexMod + shieldBonus + magicBonus + fightingStyleBonus;
   };
 
   // Create new build
