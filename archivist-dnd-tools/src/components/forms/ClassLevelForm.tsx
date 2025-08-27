@@ -3,6 +3,8 @@
  */
 
 import React, { useState } from 'react';
+import { InlineClassFeatures } from './InlineClassFeatures';
+import type { FeatureSelection } from './ClassFeatureDisplay';
 
 interface ClassLevel {
   class: string;
@@ -15,6 +17,9 @@ interface ClassLevelFormProps {
   levels: ClassLevel[];
   onChange: (levels: ClassLevel[]) => void;
   error?: string;
+  // Optional feature selection props
+  featureSelections?: { [featureId: string]: FeatureSelection };
+  onFeatureSelectionChange?: (featureId: string, selection: FeatureSelection) => void;
 }
 
 const D5E_CLASSES = [
@@ -37,6 +42,8 @@ export const ClassLevelForm: React.FC<ClassLevelFormProps> = ({
   levels,
   onChange,
   error,
+  featureSelections = {},
+  onFeatureSelectionChange,
 }) => {
   // const [showAddClass, setShowAddClass] = useState(false);
 
@@ -170,6 +177,15 @@ export const ClassLevelForm: React.FC<ClassLevelFormProps> = ({
                   <span className="font-medium">Hit Die:</span> d{classInfo.hitDie} | 
                   <span className="font-medium ml-2">Primary:</span> {classInfo.primaryAbility.join(' or ')}
                 </div>
+              )}
+
+              {/* Inline Class Features */}
+              {onFeatureSelectionChange && (
+                <InlineClassFeatures
+                  classLevel={classLevel}
+                  selections={featureSelections}
+                  onSelectionChange={onFeatureSelectionChange}
+                />
               )}
             </div>
           );

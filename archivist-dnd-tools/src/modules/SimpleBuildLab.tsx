@@ -37,7 +37,7 @@ export const SimpleBuildLab: React.FC = () => {
   // Build creation/editing state
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [editingBuild, setEditingBuild] = useState<SimpleBuild | null>(null);
-  const [activeTab, setActiveTab] = useState<'basics' | 'abilities' | 'classes' | 'equipment' | 'features'>('basics');
+  const [activeTab, setActiveTab] = useState<'basics' | 'abilities' | 'classes' | 'equipment'>('basics');
   
   // Form state
   const [buildName, setBuildName] = useState<string>('');
@@ -493,8 +493,7 @@ export const SimpleBuildLab: React.FC = () => {
             {[
               { key: 'basics' as const, label: 'Basics' },
               { key: 'abilities' as const, label: 'Ability Scores' },
-              { key: 'classes' as const, label: 'Classes & Levels' },
-              { key: 'features' as const, label: 'Class Features' },
+              { key: 'classes' as const, label: 'Classes & Features' },
               { key: 'equipment' as const, label: 'Equipment' },
             ].map(({ key, label }) => (
               <button
@@ -606,17 +605,16 @@ export const SimpleBuildLab: React.FC = () => {
             <ClassLevelForm
               levels={classLevels}
               onChange={setClassLevels}
+              featureSelections={featureSelections}
+              onFeatureSelectionChange={(featureId, selection) => {
+                setFeatureSelections(prev => ({
+                  ...prev,
+                  [featureId]: selection
+                }));
+              }}
             />
           )}
 
-          {activeTab === 'features' && (
-            <ClassFeatureDisplay
-              classLevels={classLevels}
-              selections={featureSelections}
-              onSelectionChange={setFeatureSelections}
-              abilityScores={abilityScores}
-            />
-          )}
 
           {activeTab === 'equipment' && (
             <EquipmentForm

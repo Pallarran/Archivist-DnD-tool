@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import type { ClassLevel } from '../../../types/build';
+import type { ClassLevel } from '../../types/build';
 
 // Class feature definition
 export interface ClassFeature {
