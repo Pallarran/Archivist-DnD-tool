@@ -228,14 +228,124 @@ export const SimpleBuildLab: React.FC = () => {
   };
 
   // Get selected feats from feature selections
-  const getSelectedFeats = (): string[] => {
-    const feats: string[] = [];
+  const getSelectedFeats = (): Array<{feat: string; abilityChoice?: string}> => {
+    const feats: Array<{feat: string; abilityChoice?: string}> = [];
     Object.values(featureSelections).forEach(selection => {
       if (selection.improvements?.type === 'feat' && selection.improvements.feat) {
-        feats.push(selection.improvements.feat);
+        feats.push({
+          feat: selection.improvements.feat,
+          abilityChoice: selection.improvements.featAbility
+        });
       }
     });
     return feats;
+  };
+  
+  // Get ability score bonuses from half-feats
+  const getHalfFeatAbilityBonuses = () => {
+    const bonuses = {
+      strength: 0,
+      dexterity: 0,
+      constitution: 0,
+      intelligence: 0,
+      wisdom: 0,
+      charisma: 0
+    };
+    
+    const selectedFeats = getSelectedFeats();
+    selectedFeats.forEach(feat => {
+      if (feat.abilityChoice && feat.abilityChoice in bonuses) {
+        (bonuses as any)[feat.abilityChoice] += 1;
+      }
+    });
+    
+    return bonuses;
+  };
+  
+  // Get critical hit range (20 by default, expanded for Champion, etc.)
+  const getCriticalHitRange = (): number => {
+    const fighterLevel = classLevels.find(cl => cl.class.toLowerCase() === 'fighter')?.level || 0;
+    
+    // Champion Fighter expanded critical range
+    if (hasFeature('champion')) {
+      if (fighterLevel >= 15) return 3; // 18-20 (Superior Critical)
+      if (fighterLevel >= 3) return 2; // 19-20 (Improved Critical)
+    }
+    
+    // Other expanded crit ranges can be added here
+    return 1; // Normal 20 only
+  };
+  
+  // Calculate critical hit chance including advantage states
+  const getCriticalHitChance = (advantageState: 'normal' | 'advantage' | 'disadvantage'): number => {
+    const critRange = getCriticalHitRange();
+    const baseCritChance = critRange / 20;
+    
+    const selectedFeats = getSelectedFeats().map(f => f.feat);
+    
+    if (advantageState === 'advantage') {
+      if (selectedFeats.includes('elven-accuracy')) {
+        // Elven Accuracy: Triple advantage for crit fishing
+        return 1 - Math.pow(1 - baseCritChance, 3);
+      } else {
+        // Regular advantage
+        return 1 - Math.pow(1 - baseCritChance, 2);
+      }
+    } else if (advantageState === 'disadvantage') {
+      return Math.pow(baseCritChance, 2);
+    }
+    
+    return baseCritChance; // Normal
+  };
+  
+  // Calculate bonus action attacks
+  const getBonusActionAttacks = (): {damage: string; attacks: number; description: string}[] => {
+    const bonusAttacks: {damage: string; attacks: number; description: string}[] = [];
+    const selectedFeats = getSelectedFeats().map(f => f.feat);
+    const weapon = equipment.mainHand;
+    const offHand = equipment.offHand;
+    const halfFeatBonuses = getHalfFeatAbilityBonuses();
+    
+    // Two-Weapon Fighting
+    if (weapon && offHand && !weapon.properties.includes('heavy') && !offHand.properties.includes('heavy')) {
+      const fightingStyles = getFightingStyles();
+      let offHandDamage = offHand.damage || '1d6';
+      
+      // Two-Weapon Fighting style adds ability modifier
+      if (fightingStyles.includes('two-weapon-fighting')) {
+        const abilityMod = weapon.type === 'ranged' 
+          ? getAbilityModifier(abilityScores.dexterity + halfFeatBonuses.dexterity)
+          : getAbilityModifier(abilityScores.strength + halfFeatBonuses.strength);
+        offHandDamage += `+${abilityMod}`;
+      }
+      
+      bonusAttacks.push({
+        damage: offHandDamage,
+        attacks: 1,
+        description: 'Two-Weapon Fighting'
+      });
+    }
+    
+    // Polearm Master bonus attack
+    if (selectedFeats.includes('polearm-master') && weapon && 
+        ['glaive', 'halberd', 'pike', 'quarterstaff', 'spear'].some(w => weapon.name.toLowerCase().includes(w))) {
+      bonusAttacks.push({
+        damage: '1d4+' + getAbilityModifier(abilityScores.strength + halfFeatBonuses.strength),
+        attacks: 1,
+        description: 'Polearm Master'
+      });
+    }
+    
+    // Crossbow Expert bonus attack
+    if (selectedFeats.includes('crossbow-expert') && weapon && weapon.name.toLowerCase().includes('crossbow')) {
+      bonusAttacks.push({
+        damage: '1d6+' + getAbilityModifier(abilityScores.dexterity + halfFeatBonuses.dexterity),
+        attacks: 1,
+        description: 'Crossbow Expert'
+      });
+    }
+    
+    return bonusAttacks;
   };
 
   // Calculate Sneak Attack dice for rogues
@@ -394,6 +504,20 @@ export const SimpleBuildLab: React.FC = () => {
     
     if (totalAttacks > 1) {
       damageString += ` (×${totalAttacks} attacks)`;
+    }
+    
+    // Add bonus action attacks
+    const bonusAttacks = getBonusActionAttacks();
+    if (bonusAttacks.length > 0) {
+      const bonusAttackStrings = bonusAttacks.map(ba => `${ba.damage} ${ba.description}`);
+      damageString += ` + ${bonusAttackStrings.join(' + ')}`;
+    }
+    
+    // Add critical hit information
+    const critRange = getCriticalHitRange();
+    if (critRange > 1) {
+      const critThreshold = 21 - critRange;
+      damageString += ` (Crit: ${critThreshold}-20)`;
     }
     
     return damageString;
