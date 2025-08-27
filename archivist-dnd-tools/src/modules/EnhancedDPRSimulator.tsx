@@ -15,6 +15,7 @@ import {
 import { MonteCarloEngine, type CombatScenario, type MonteCarloResults } from '../engine/monteCarlo';
 import { MonteCarloResultsComponent } from '../components/results/MonteCarloResults';
 import { ResourceManager } from '../utils/resourceManagement';
+import { DPRByACChart, LevelProgressionChart } from '../components/charts/DPRChart';
 
 // Combat target interface
 interface Target {
@@ -114,6 +115,14 @@ export const EnhancedDPRSimulator: React.FC = () => {
   const [resourceManagers, setResourceManagers] = useState<Record<string, ResourceManager>>({});
   const [encountersRemaining, setEncountersRemaining] = useState<number>(6);
   const [currentEncounter, setCurrentEncounter] = useState<number>(1);
+
+  // DPR Analysis state
+  const [showDPRAnalysis, setShowDPRAnalysis] = useState<boolean>(false);
+  const [acRange, setACRange] = useState<{min: number; max: number}>({ min: 10, max: 25 });
+  const [showAdvantageInChart, setShowAdvantageInChart] = useState<boolean>(true);
+  const [showDisadvantageInChart, setShowDisadvantageInChart] = useState<boolean>(true);
+  const [selectedAnalysisBuild, setSelectedAnalysisBuild] = useState<string | null>(null);
+  const [progressionMaxLevel, setProgressionMaxLevel] = useState<number>(20);
 
   // Calculate critical hit chance based on build features
   const calculateCritChance = (build: any, advantageState: 'normal' | 'advantage' | 'disadvantage'): number => {
@@ -652,6 +661,12 @@ export const EnhancedDPRSimulator: React.FC = () => {
                 className="px-3 py-2 bg-green-200 text-green-700 rounded-md hover:bg-green-300 text-sm"
               >
                 {showResourceManager ? 'Hide' : 'Show'} Resources
+              </button>
+              <button
+                onClick={() => setShowDPRAnalysis(!showDPRAnalysis)}
+                className="px-3 py-2 bg-indigo-200 text-indigo-700 rounded-md hover:bg-indigo-300 text-sm"
+              >
+                {showDPRAnalysis ? 'Hide' : 'Show'} DPR Analysis
               </button>
             </div>
           </div>
@@ -1393,6 +1408,213 @@ export const EnhancedDPRSimulator: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* DPR Analysis Panel */}
+        {showDPRAnalysis && (
+          <div className="max-w-7xl mx-auto px-4 py-4 space-y-6">
+            {/* DPR by AC Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  DPR by Armor Class Analysis
+                </h3>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">AC Range:</label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="15"
+                      value={acRange.min}
+                      onChange={(e) => setACRange(prev => ({ ...prev, min: parseInt(e.target.value) || 10 }))}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                    />
+                    <span className="text-gray-500">to</span>
+                    <input
+                      type="number"
+                      min="20"
+                      max="30"
+                      value={acRange.max}
+                      onChange={(e) => setACRange(prev => ({ ...prev, max: parseInt(e.target.value) || 25 }))}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <label className="flex items-center space-x-1">
+                      <input
+                        type="checkbox"
+                        checked={showAdvantageInChart}
+                        onChange={(e) => setShowAdvantageInChart(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Advantage</span>
+                    </label>
+                    <label className="flex items-center space-x-1">
+                      <input
+                        type="checkbox"
+                        checked={showDisadvantageInChart}
+                        onChange={(e) => setShowDisadvantageInChart(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Disadvantage</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {selectedBuilds.some(id => id !== null) ? (
+                <DPRByACChart
+                  builds={selectedBuilds
+                    .map((buildId, index) => {
+                      if (!buildId) return null;
+                      const build = builds.find(b => b.id === buildId);
+                      if (!build) return null;
+                      
+                      const colors = ['#3b82f6', '#10b981', '#f59e0b']; // blue, green, amber
+                      return {
+                        build,
+                        name: build.name,
+                        color: colors[index % colors.length]
+                      };
+                    })
+                    .filter(Boolean) as Array<{ build: SimpleBuild; name: string; color: string }>
+                  }
+                  acRange={acRange}
+                  showAdvantage={showAdvantageInChart}
+                  showDisadvantage={showDisadvantageInChart}
+                />
+              ) : (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  Select builds to see DPR by AC analysis
+                </div>
+              )}
+            </div>
+
+            {/* Level Progression Analysis */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Level Progression Analysis
+                </h3>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Build:</label>
+                    <select
+                      value={selectedAnalysisBuild || ''}
+                      onChange={(e) => setSelectedAnalysisBuild(e.target.value || null)}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    >
+                      <option value="">Select a build...</option>
+                      {selectedBuilds.map((buildId, index) => {
+                        if (!buildId) return null;
+                        const build = builds.find(b => b.id === buildId);
+                        if (!build) return null;
+                        
+                        return (
+                          <option key={buildId} value={buildId}>
+                            {build.name} (Column {index + 1})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Target AC:</label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="30"
+                      value={target.ac}
+                      onChange={(e) => setTarget(prev => ({ ...prev, ac: parseInt(e.target.value) || 15 }))}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Max Level:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={progressionMaxLevel}
+                      onChange={(e) => setProgressionMaxLevel(parseInt(e.target.value) || 20)}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {selectedAnalysisBuild && (() => {
+                const build = builds.find(b => b.id === selectedAnalysisBuild);
+                return build ? (
+                  <LevelProgressionChart
+                    build={build}
+                    buildName={build.name}
+                    targetAC={target.ac}
+                    maxLevel={progressionMaxLevel}
+                  />
+                ) : null;
+              })()}
+              
+              {!selectedAnalysisBuild && (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  Select a build to see level progression analysis
+                </div>
+              )}
+            </div>
+
+            {/* DPR Breakpoint Summary */}
+            {selectedAnalysisBuild && (() => {
+              const build = builds.find(b => b.id === selectedAnalysisBuild);
+              if (!build) return null;
+              
+              return (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    DPR Breakpoint Analysis - {build.name}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Optimal AC Ranges */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                      <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Optimal Performance</h4>
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        Highest DPR against AC 10-14
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        Use against lightly armored targets
+                      </p>
+                    </div>
+                    
+                    {/* Moderate AC Ranges */}
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                      <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Moderate Performance</h4>
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        Good DPR against AC 15-19
+                      </p>
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                        Standard combat effectiveness
+                      </p>
+                    </div>
+                    
+                    {/* High AC Challenges */}
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                      <h4 className="font-medium text-red-900 dark:text-red-100 mb-2">Challenging Targets</h4>
+                      <p className="text-sm text-red-800 dark:text-red-200">
+                        Reduced DPR against AC 20+
+                      </p>
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        Consider advantage sources or accuracy boosts
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
