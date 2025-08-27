@@ -247,24 +247,34 @@ export const EnhancedDPRSimulator: React.FC = () => {
     }
   };
 
-  // Parse damage string into average damage
+  // Parse damage string into average damage accounting for multiple attacks
   const parseDamage = (damage: string): number => {
     try {
+      let baseDamage = 0;
+      let attackMultiplier = 1;
+
+      // Check for attack multiplier (e.g., "1d8+5 (×2 attacks)")
+      const attackMatch = damage.match(/×(\d+)\s*attacks?\)/);
+      if (attackMatch) {
+        attackMultiplier = parseInt(attackMatch[1]) || 1;
+      }
+
       if (damage.includes('d')) {
         const match = damage.match(/(\d+)d(\d+)(?:\+(\d+))?(?:\-(\d+))?/);
         if (match) {
           const [, numDice, dieSize, bonus, penalty] = match;
           const diceAverage = parseInt(numDice) * (parseInt(dieSize) + 1) / 2;
           const totalBonus = (parseInt(bonus) || 0) - (parseInt(penalty) || 0);
-          return diceAverage + totalBonus;
+          baseDamage = diceAverage + totalBonus;
         }
       } else {
-        return parseFloat(damage) || 0;
+        baseDamage = parseFloat(damage) || 0;
       }
+
+      return baseDamage * attackMultiplier;
     } catch (e) {
       return 8; // Default
     }
-    return 8;
   };
 
   // Calculate Sharpshooter/GWM break-even AC for a build

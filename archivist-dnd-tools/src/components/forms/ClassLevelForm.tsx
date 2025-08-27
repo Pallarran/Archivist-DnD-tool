@@ -77,6 +77,70 @@ export const ClassLevelForm: React.FC<ClassLevelFormProps> = ({
     return D5E_CLASSES.filter(cls => !usedClasses.includes(cls.value));
   };
 
+  // Auto-detect subclass from feature selections
+  const getSubclassFromFeatures = (className: string): string => {
+    if (!featureSelections) return '';
+    
+    const subclassMapping: { [key: string]: { [selectionId: string]: string } } = {
+      fighter: {
+        'champion': 'champion',
+        'battle-master': 'battle-master', 
+        'eldritch-knight': 'eldritch-knight',
+        'arcane-archer': 'arcane-archer',
+        'cavalier': 'cavalier',
+        'samurai': 'samurai'
+      },
+      rogue: {
+        'thief': 'thief',
+        'assassin': 'assassin',
+        'arcane-trickster': 'arcane-trickster',
+        'inquisitive': 'inquisitive',
+        'mastermind': 'mastermind',
+        'scout': 'scout',
+        'swashbuckler': 'swashbuckler'
+      },
+      wizard: {
+        'abjuration': 'abjuration',
+        'conjuration': 'conjuration',
+        'divination': 'divination',
+        'enchantment': 'enchantment',
+        'evocation': 'evocation',
+        'illusion': 'illusion',
+        'necromancy': 'necromancy',
+        'transmutation': 'transmutation'
+      },
+      barbarian: {
+        'berserker': 'berserker',
+        'totem-warrior': 'totem-warrior'
+      },
+      ranger: {
+        'hunter': 'hunter',
+        'beast-master': 'beast-master'
+      },
+      paladin: {
+        'devotion': 'devotion',
+        'ancients': 'ancients',
+        'vengeance': 'vengeance'
+      }
+    };
+
+    const classMapping = subclassMapping[className.toLowerCase()];
+    if (!classMapping) return '';
+
+    // Check all feature selections for subclass choices
+    for (const selection of Object.values(featureSelections)) {
+      if (selection.selections) {
+        for (const selectionId of selection.selections) {
+          if (classMapping[selectionId]) {
+            return classMapping[selectionId];
+          }
+        }
+      }
+    }
+    
+    return '';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -97,6 +161,12 @@ export const ClassLevelForm: React.FC<ClassLevelFormProps> = ({
       <div className="space-y-4">
         {levels.map((classLevel, index) => {
           const classInfo = D5E_CLASSES.find(c => c.value === classLevel.class);
+          const autoDetectedSubclass = getSubclassFromFeatures(classLevel.class);
+          
+          // Auto-update the subclass if it's different from what's detected
+          if (autoDetectedSubclass && autoDetectedSubclass !== classLevel.subclass) {
+            updateClassLevel(index, { subclass: autoDetectedSubclass });
+          }
           
           return (
             <div key={index} className="p-4 border border-gray-200 rounded-lg">
@@ -113,7 +183,7 @@ export const ClassLevelForm: React.FC<ClassLevelFormProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Class
@@ -157,25 +227,18 @@ export const ClassLevelForm: React.FC<ClassLevelFormProps> = ({
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subclass
-                  </label>
-                  <input
-                    type="text"
-                    value={classLevel.subclass || ''}
-                    onChange={(e) => updateClassLevel(index, { subclass: e.target.value })}
-                    placeholder="e.g., Champion, Arcane Trickster"
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
               </div>
 
               {classInfo && (
                 <div className="mt-3 text-sm text-gray-600">
                   <span className="font-medium">Hit Die:</span> d{classInfo.hitDie} | 
                   <span className="font-medium ml-2">Primary:</span> {classInfo.primaryAbility.join(' or ')}
+                  {autoDetectedSubclass && (
+                    <>
+                      {' | '}
+                      <span className="font-medium">Subclass:</span> {autoDetectedSubclass.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                    </>
+                  )}
                 </div>
               )}
 

@@ -339,7 +339,10 @@ export const CLASS_FEATURES_DATABASE: ClassFeature[] = [
     choices: [
       { id: 'champion', name: 'Champion', description: 'Focus on raw physical power and combat prowess' },
       { id: 'battle-master', name: 'Battle Master', description: 'Tactical fighter with combat maneuvers' },
-      { id: 'eldritch-knight', name: 'Eldritch Knight', description: 'Fighter with magical abilities' }
+      { id: 'eldritch-knight', name: 'Eldritch Knight', description: 'Fighter with magical abilities' },
+      { id: 'arcane-archer', name: 'Arcane Archer', description: 'Combines archery with magical arrows' },
+      { id: 'cavalier', name: 'Cavalier', description: 'Master of mounted combat and protection' },
+      { id: 'samurai', name: 'Samurai', description: 'Warrior with fighting spirit and social grace' }
     ]
   },
   {
@@ -540,7 +543,11 @@ export const CLASS_FEATURES_DATABASE: ClassFeature[] = [
     choices: [
       { id: 'thief', name: 'Thief', description: 'Master of stealth, infiltration, and theft' },
       { id: 'assassin', name: 'Assassin', description: 'Master of dealing death from the shadows' },
-      { id: 'arcane-trickster', name: 'Arcane Trickster', description: 'Rogue with magical abilities' }
+      { id: 'arcane-trickster', name: 'Arcane Trickster', description: 'Rogue with magical abilities' },
+      { id: 'inquisitive', name: 'Inquisitive', description: 'Master investigator and lie detector' },
+      { id: 'mastermind', name: 'Mastermind', description: 'Schemer and manipulator from the shadows' },
+      { id: 'scout', name: 'Scout', description: 'Survivalist and skirmisher' },
+      { id: 'swashbuckler', name: 'Swashbuckler', description: 'Daring duelist and charming rogue' }
     ]
   },
   {
