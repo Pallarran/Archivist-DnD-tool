@@ -9,44 +9,53 @@ import { getClassFeatures } from '../../data/classFeatures';
 import type { FeatureSelection } from './ClassFeatureDisplay';
 
 // Common D&D 5e feats for selection
-const COMMON_FEATS = [
-  { id: 'alert', name: 'Alert', description: '+5 initiative, no surprised, no sneak attacks' },
-  { id: 'athlete', name: 'Athlete', description: '+1 Str/Dex, climb bonuses, standing jump bonuses' },
-  { id: 'charger', name: 'Charger', description: 'Bonus after dash or charge attacks' },
-  { id: 'crossbow-expert', name: 'Crossbow Expert', description: 'Ignore loading, no disadvantage in melee, bonus hand crossbow attack' },
-  { id: 'dual-wielder', name: 'Dual Wielder', description: '+1 AC while dual wielding, use non-light weapons' },
-  { id: 'durable', name: 'Durable', description: '+1 Con, minimum healing on hit dice' },
-  { id: 'elven-accuracy', name: 'Elven Accuracy', description: '+1 Dex/Int/Wis/Cha, reroll one die with advantage' },
-  { id: 'fey-touched', name: 'Fey Touched', description: '+1 Int/Wis/Cha, learn misty step + 1st level spell' },
-  { id: 'great-weapon-master', name: 'Great Weapon Master', description: 'Bonus attack on crit/kill, -5/+10 power attack' },
-  { id: 'half-feat-str', name: 'Heavy Armor Master', description: '+1 Str, reduce physical damage by 3' },
-  { id: 'inspiring-leader', name: 'Inspiring Leader', description: 'Give temporary HP to allies (Cha mod + level)' },
-  { id: 'keen-mind', name: 'Keen Mind', description: '+1 Int, perfect memory, always know time/direction' },
-  { id: 'lucky', name: 'Lucky', description: 'Reroll 3 dice per long rest' },
-  { id: 'magic-initiate', name: 'Magic Initiate', description: 'Learn 2 cantrips and 1 1st-level spell' },
-  { id: 'martial-adept', name: 'Martial Adept', description: 'Learn 2 maneuvers and gain superiority die' },
-  { id: 'metamagic-adept', name: 'Metamagic Adept', description: 'Learn 2 metamagic options, gain sorcery points' },
-  { id: 'mobile', name: 'Mobile', description: '+10 speed, avoid opportunity attacks after attacking' },
-  { id: 'moderately-armored', name: 'Moderately Armored', description: '+1 Str/Dex, gain medium armor and shield proficiency' },
-  { id: 'observant', name: 'Observant', description: '+1 Int/Wis, +5 to passive Perception and Investigation' },
-  { id: 'piercer', name: 'Piercer', description: '+1 Str/Dex, reroll piercing damage die, crit adds damage die' },
-  { id: 'polearm-master', name: 'Polearm Master', description: 'Bonus attack with polearm butt, opportunity attacks on approach' },
-  { id: 'resilient', name: 'Resilient', description: '+1 ability score, gain proficiency in that save' },
-  { id: 'ritual-caster', name: 'Ritual Caster', description: 'Learn ritual spells from chosen class' },
-  { id: 'savage-attacker', name: 'Savage Attacker', description: 'Reroll damage dice once per turn' },
-  { id: 'sentinel', name: 'Sentinel', description: 'Stop movement on opportunity attacks, attack when allies hit' },
-  { id: 'shadow-touched', name: 'Shadow Touched', description: '+1 Int/Wis/Cha, learn invisibility + 1st level spell' },
-  { id: 'sharpshooter', name: 'Sharpshooter', description: 'Ignore cover/range, -5/+10 power shot' },
-  { id: 'shield-master', name: 'Shield Master', description: 'Shield bash, evasion with shield, bonus to Dex saves' },
-  { id: 'skill-expert', name: 'Skill Expert', description: '+1 ability, gain proficiency + expertise in one skill' },
-  { id: 'skilled', name: 'Skilled', description: 'Gain 3 skill proficiencies' },
-  { id: 'slasher', name: 'Slasher', description: '+1 Str/Dex, reduce speed on slashing hit, crit imposes disadvantage' },
-  { id: 'spell-sniper', name: 'Spell Sniper', description: 'Double spell range, ignore cover, learn cantrip' },
-  { id: 'telekinetic', name: 'Telekinetic', description: '+1 Int/Wis/Cha, bonus action shove, misty step reactions' },
-  { id: 'telepathic', name: 'Telepathic', description: '+1 Int/Wis/Cha, detect thoughts, telepathic communication' },
-  { id: 'tough', name: 'Tough', description: '+2 hit points per level' },
-  { id: 'war-caster', name: 'War Caster', description: 'Advantage on concentration, cast with hands full, opportunity spell attacks' },
-  { id: 'weapon-master', name: 'Weapon Master', description: '+1 Str/Dex, gain 4 weapon proficiencies' }
+interface FeatDefinition {
+  id: string;
+  name: string;
+  description: string;
+  abilityOptions?: string[]; // For half-feats that allow choice of ability score
+  fixedAbility?: string; // For half-feats with fixed ability score
+  isHalfFeat: boolean;
+}
+
+const COMMON_FEATS: FeatDefinition[] = [
+  { id: 'alert', name: 'Alert', description: '+5 initiative, no surprised, no sneak attacks', isHalfFeat: false },
+  { id: 'athlete', name: 'Athlete', description: 'Climb bonuses, standing jump bonuses', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'charger', name: 'Charger', description: 'Bonus after dash or charge attacks', isHalfFeat: false },
+  { id: 'crossbow-expert', name: 'Crossbow Expert', description: 'Ignore loading, no disadvantage in melee, bonus hand crossbow attack', isHalfFeat: false },
+  { id: 'dual-wielder', name: 'Dual Wielder', description: '+1 AC while dual wielding, use non-light weapons', isHalfFeat: false },
+  { id: 'durable', name: 'Durable', description: 'Minimum healing on hit dice', fixedAbility: 'constitution', isHalfFeat: true },
+  { id: 'elven-accuracy', name: 'Elven Accuracy', description: 'Reroll one die with advantage', abilityOptions: ['dexterity', 'intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'fey-touched', name: 'Fey Touched', description: 'Learn misty step + 1st level spell', abilityOptions: ['intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'great-weapon-master', name: 'Great Weapon Master', description: 'Bonus attack on crit/kill, -5/+10 power attack', isHalfFeat: false },
+  { id: 'heavy-armor-master', name: 'Heavy Armor Master', description: 'Reduce physical damage by 3', fixedAbility: 'strength', isHalfFeat: true },
+  { id: 'inspiring-leader', name: 'Inspiring Leader', description: 'Give temporary HP to allies (Cha mod + level)', fixedAbility: 'charisma', isHalfFeat: true },
+  { id: 'keen-mind', name: 'Keen Mind', description: 'Perfect memory, always know time/direction', fixedAbility: 'intelligence', isHalfFeat: true },
+  { id: 'lucky', name: 'Lucky', description: 'Reroll 3 dice per long rest', isHalfFeat: false },
+  { id: 'magic-initiate', name: 'Magic Initiate', description: 'Learn 2 cantrips and 1 1st-level spell', isHalfFeat: false },
+  { id: 'martial-adept', name: 'Martial Adept', description: 'Learn 2 maneuvers and gain superiority die', isHalfFeat: false },
+  { id: 'metamagic-adept', name: 'Metamagic Adept', description: 'Learn 2 metamagic options, gain sorcery points', isHalfFeat: false },
+  { id: 'mobile', name: 'Mobile', description: '+10 speed, avoid opportunity attacks after attacking', isHalfFeat: false },
+  { id: 'moderately-armored', name: 'Moderately Armored', description: 'Gain medium armor and shield proficiency', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'observant', name: 'Observant', description: '+5 to passive Perception and Investigation', abilityOptions: ['intelligence', 'wisdom'], isHalfFeat: true },
+  { id: 'piercer', name: 'Piercer', description: 'Reroll piercing damage die, crit adds damage die', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'polearm-master', name: 'Polearm Master', description: 'Bonus attack with polearm butt, opportunity attacks on approach', isHalfFeat: false },
+  { id: 'resilient', name: 'Resilient', description: 'Gain proficiency in chosen save', abilityOptions: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'ritual-caster', name: 'Ritual Caster', description: 'Learn ritual spells from chosen class', isHalfFeat: false },
+  { id: 'savage-attacker', name: 'Savage Attacker', description: 'Reroll damage dice once per turn', isHalfFeat: false },
+  { id: 'sentinel', name: 'Sentinel', description: 'Stop movement on opportunity attacks, attack when allies hit', isHalfFeat: false },
+  { id: 'shadow-touched', name: 'Shadow Touched', description: 'Learn invisibility + 1st level spell', abilityOptions: ['intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'sharpshooter', name: 'Sharpshooter', description: 'Ignore cover/range, -5/+10 power shot', isHalfFeat: false },
+  { id: 'shield-master', name: 'Shield Master', description: 'Shield bash, evasion with shield, bonus to Dex saves', isHalfFeat: false },
+  { id: 'skill-expert', name: 'Skill Expert', description: 'Gain proficiency + expertise in one skill', abilityOptions: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'skilled', name: 'Skilled', description: 'Gain 3 skill proficiencies', isHalfFeat: false },
+  { id: 'slasher', name: 'Slasher', description: 'Reduce speed on slashing hit, crit imposes disadvantage', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'spell-sniper', name: 'Spell Sniper', description: 'Double spell range, ignore cover, learn cantrip', isHalfFeat: false },
+  { id: 'telekinetic', name: 'Telekinetic', description: 'Bonus action shove, misty step reactions', abilityOptions: ['intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'telepathic', name: 'Telepathic', description: 'Detect thoughts, telepathic communication', abilityOptions: ['intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'tough', name: 'Tough', description: '+2 hit points per level', isHalfFeat: false },
+  { id: 'war-caster', name: 'War Caster', description: 'Advantage on concentration, cast with hands full, opportunity spell attacks', isHalfFeat: false },
+  { id: 'weapon-master', name: 'Weapon Master', description: 'Gain 4 weapon proficiencies', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true }
 ];
 
 interface InlineClassFeaturesProps {
@@ -266,18 +275,58 @@ export const InlineClassFeatures: React.FC<InlineClassFeaturesProps> = ({
                       )}
                       
                       {currentSelection?.improvements?.type === 'feat' && (
-                        <select
-                          value={currentSelection?.improvements?.feat || ''}
-                          onChange={(e) => handleImprovementSelection(feature.id, 'feat', e.target.value)}
-                          className="w-full text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        >
-                          <option value="">Choose a feat...</option>
-                          {COMMON_FEATS.map((feat) => (
-                            <option key={feat.id} value={feat.id}>
-                              {feat.name} - {feat.description}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="space-y-2">
+                          <select
+                            value={currentSelection?.improvements?.feat || ''}
+                            onChange={(e) => handleImprovementSelection(feature.id, 'feat', e.target.value)}
+                            className="w-full text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          >
+                            <option value="">Choose a feat...</option>
+                            {COMMON_FEATS.map((feat) => (
+                              <option key={feat.id} value={feat.id}>
+                                {feat.name}{feat.isHalfFeat ? ' (+1 ability)' : ''} - {feat.description}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          {/* Half-feat ability score choice */}
+                          {(() => {
+                            const selectedFeat = COMMON_FEATS.find(f => f.id === currentSelection?.improvements?.feat);
+                            if (selectedFeat?.isHalfFeat && selectedFeat.abilityOptions) {
+                              return (
+                                <div>
+                                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                    Choose ability to increase:
+                                  </label>
+                                  <select
+                                    value={currentSelection?.improvements?.featAbility || ''}
+                                    onChange={(e) => {
+                                      const newSelection = selections[feature.id] || { featureId: feature.id, selections: [], improvements: {} };
+                                      if (!newSelection.improvements) newSelection.improvements = {};
+                                      newSelection.improvements.featAbility = e.target.value;
+                                      onSelectionChange(feature.id, newSelection);
+                                    }}
+                                    className="w-full text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  >
+                                    <option value="">Choose ability...</option>
+                                    {selectedFeat.abilityOptions.map(ability => (
+                                      <option key={ability} value={ability}>
+                                        {ability.charAt(0).toUpperCase() + ability.slice(1)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              );
+                            } else if (selectedFeat?.isHalfFeat && selectedFeat.fixedAbility) {
+                              return (
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  +1 {selectedFeat.fixedAbility.charAt(0).toUpperCase() + selectedFeat.fixedAbility.slice(1)}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()} 
+                        </div>
                       )}
                     </div>
                   )}

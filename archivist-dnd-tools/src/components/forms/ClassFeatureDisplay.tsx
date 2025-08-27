@@ -49,9 +49,15 @@ export interface SelectedFeatures {
       type: string;
       selections: string[];
       customData?: any;
+      asi?: { [ability: string]: number };
+      feat?: string;
+      featAbility?: string; // For half-feat ability score choice
     }[];
   };
 }
+
+// Type alias for backward compatibility
+export type FeatureSelection = SelectedFeatures[string];
 
 interface ClassFeatureDisplayProps {
   classLevels: ClassLevel[];
@@ -751,3 +757,5 @@ export const ClassFeatureDisplay: React.FC<ClassFeatureDisplayProps> = ({
     </div>
   );
 };
+
+export default ClassFeatureDisplay;

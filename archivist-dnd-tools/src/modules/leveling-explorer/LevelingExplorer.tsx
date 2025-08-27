@@ -168,13 +168,15 @@ export const LevelingExplorer: React.FC = () => {
       
       // Enhanced DPR calculation
       const parseDamage = (damageStr: string): number => {
-        let totalDamage = 0;
+        let baseDamage = 0;
+        let perAttackExtraDamage = 0;
+        let oncePerTurnDamage = 0;
         
         // Base weapon damage
         const match = damageStr.match(/(\d+)d(\d+)(?:\+(\d+))?/);
         if (match) {
           const [, numDice, dieSize, bonus] = match;
-          totalDamage = parseInt(numDice) * (parseInt(dieSize) + 1) / 2 + (parseInt(bonus) || 0);
+          baseDamage = parseInt(numDice) * (parseInt(dieSize) + 1) / 2 + (parseInt(bonus) || 0);
         }
         
         // Add feature damage
@@ -182,24 +184,27 @@ export const LevelingExplorer: React.FC = () => {
         if (extraMatch) {
           const extraStr = extraMatch[1];
           
-          // Sneak Attack
-          const sneakMatch = extraStr.match(/Sneak\+(\d+)d6/);
-          if (sneakMatch) totalDamage += parseInt(sneakMatch[1]) * 3.5;
+          // Sneak Attack (once per turn, not per attack)
+          const sneakMatch = extraStr.match(/Sneak\+(\d+)d6(?:\/turn)?/);
+          if (sneakMatch) {
+            oncePerTurnDamage += parseInt(sneakMatch[1]) * 3.5;
+          }
           
-          // Rage
+          // Rage (applies to each attack)
           const rageMatch = extraStr.match(/Rage\+(\d+)/);
-          if (rageMatch) totalDamage += parseInt(rageMatch[1]);
+          if (rageMatch) perAttackExtraDamage += parseInt(rageMatch[1]);
           
-          // Smite
+          // Smite (typically once per turn, like sneak attack)
           const smiteMatch = extraStr.match(/Smite\+(\d+)d8/);
-          if (smiteMatch) totalDamage += parseInt(smiteMatch[1]) * 4.5;
+          if (smiteMatch) oncePerTurnDamage += parseInt(smiteMatch[1]) * 4.5;
           
-          // Power attacks
+          // Power attacks (applies to each attack)
           const powerMatch = extraStr.match(/(?:GWM|SS)\+(\d+)/);
-          if (powerMatch) totalDamage += parseInt(powerMatch[1]);
+          if (powerMatch) perAttackExtraDamage += parseInt(powerMatch[1]);
         }
         
-        return totalDamage;
+        // Return: (base + per-attack extras) * attacks + once-per-turn extras
+        return (baseDamage + perAttackExtraDamage) * totalAttacks + oncePerTurnDamage;
       };
       
       const avgDamage = parseDamage(damage);

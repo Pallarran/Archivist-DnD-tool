@@ -251,7 +251,8 @@ export const EnhancedDPRSimulator: React.FC = () => {
   const parseDamage = (damage: string): number => {
     try {
       let baseDamage = 0;
-      let extraDamage = 0;
+      let perAttackExtraDamage = 0;
+      let oncePerTurnDamage = 0;
       let attackMultiplier = 1;
 
       // Check for attack multiplier (e.g., "1d8+5 (×2 attacks)")
@@ -278,53 +279,53 @@ export const EnhancedDPRSimulator: React.FC = () => {
       if (extraDamageMatch) {
         const extraDamageString = extraDamageMatch[1];
         
-        // Sneak Attack damage (e.g., "Sneak+3d6")
-        const sneakMatch = extraDamageString.match(/Sneak\+(\d+)d6/);
+        // Sneak Attack damage (e.g., "Sneak+3d6/turn") - only once per turn
+        const sneakMatch = extraDamageString.match(/Sneak\+(\d+)d6(?:\/turn)?/);
         if (sneakMatch) {
           const sneakDice = parseInt(sneakMatch[1]);
-          extraDamage += sneakDice * 3.5; // Average of 1d6
+          oncePerTurnDamage += sneakDice * 3.5; // Only added once, not per attack
         }
         
-        // Rage damage (e.g., "Rage+2")
+        // Rage damage (e.g., "Rage+2") - applies to each attack
         const rageMatch = extraDamageString.match(/Rage\+(\d+)/);
         if (rageMatch) {
-          extraDamage += parseInt(rageMatch[1]);
+          perAttackExtraDamage += parseInt(rageMatch[1]);
         }
         
-        // Divine Smite (e.g., "Smite+2d8")
+        // Divine Smite (e.g., "Smite+2d8") - typically once per turn
         const smiteMatch = extraDamageString.match(/Smite\+(\d+)d8/);
         if (smiteMatch) {
           const smiteDice = parseInt(smiteMatch[1]);
-          extraDamage += smiteDice * 4.5; // Average of 1d8
+          oncePerTurnDamage += smiteDice * 4.5; // Average of 1d8
         }
         
-        // Great Weapon Master/Sharpshooter (e.g., "GWM+10", "SS+10")
+        // Great Weapon Master/Sharpshooter (e.g., "GWM+10", "SS+10") - applies to each attack
         const powerAttackMatch = extraDamageString.match(/(?:GWM|SS)\+(\d+)/);
         if (powerAttackMatch) {
-          extraDamage += parseInt(powerAttackMatch[1]);
+          perAttackExtraDamage += parseInt(powerAttackMatch[1]);
         }
         
-        // Great Weapon Fighting (e.g., "GWF+0.8")
+        // Great Weapon Fighting (e.g., "GWF+0.8") - applies to each attack
         const gwfMatch = extraDamageString.match(/GWF\+([\d.]+)/);
         if (gwfMatch) {
-          extraDamage += parseFloat(gwfMatch[1]);
+          perAttackExtraDamage += parseFloat(gwfMatch[1]);
         }
         
-        // Piercer feat (e.g., "Pierce+1d")
+        // Piercer feat (e.g., "Pierce+1d") - applies to each attack
         const pierceMatch = extraDamageString.match(/Pierce\+(\d+)d/);
         if (pierceMatch) {
-          // Assumes rerolling the weapon's damage die
-          extraDamage += parseInt(pierceMatch[1]) * 1; // Conservative estimate
+          perAttackExtraDamage += parseInt(pierceMatch[1]) * 1; // Conservative estimate
         }
         
-        // Savage Attacker (e.g., "Savage+0.5d")
+        // Savage Attacker (e.g., "Savage+0.5d") - applies to each attack
         const savageMatch = extraDamageString.match(/Savage\+([\d.]+)d/);
         if (savageMatch) {
-          extraDamage += parseFloat(savageMatch[1]) * 4; // Assuming d8 average
+          perAttackExtraDamage += parseFloat(savageMatch[1]) * 4; // Assuming d8 average
         }
       }
 
-      return (baseDamage + extraDamage) * attackMultiplier;
+      // Calculate total DPR: (base damage + per-attack extras) * attacks + once-per-turn extras
+      return (baseDamage + perAttackExtraDamage) * attackMultiplier + oncePerTurnDamage;
     } catch (e) {
       return 8; // Default
     }

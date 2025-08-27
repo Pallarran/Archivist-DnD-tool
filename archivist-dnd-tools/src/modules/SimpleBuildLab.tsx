@@ -11,6 +11,31 @@ import { EquipmentForm } from '../components/forms/EquipmentForm';
 import { ClassFeatureDisplay, type FeatureSelection } from '../components/forms/ClassFeatureDisplay';
 import type { Equipment, ClassLevel } from '../types/build';
 
+// Import feats for half-feat ability score handling
+const COMMON_FEATS = [
+  { id: 'athlete', name: 'Athlete', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'durable', name: 'Durable', fixedAbility: 'constitution', isHalfFeat: true },
+  { id: 'elven-accuracy', name: 'Elven Accuracy', abilityOptions: ['dexterity', 'intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'fey-touched', name: 'Fey Touched', abilityOptions: ['intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'great-weapon-master', name: 'Great Weapon Master', isHalfFeat: false },
+  { id: 'heavy-armor-master', name: 'Heavy Armor Master', fixedAbility: 'strength', isHalfFeat: true },
+  { id: 'inspiring-leader', name: 'Inspiring Leader', fixedAbility: 'charisma', isHalfFeat: true },
+  { id: 'keen-mind', name: 'Keen Mind', fixedAbility: 'intelligence', isHalfFeat: true },
+  { id: 'moderately-armored', name: 'Moderately Armored', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'observant', name: 'Observant', abilityOptions: ['intelligence', 'wisdom'], isHalfFeat: true },
+  { id: 'piercer', name: 'Piercer', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'resilient', name: 'Resilient', abilityOptions: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'shadow-touched', name: 'Shadow Touched', abilityOptions: ['intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'sharpshooter', name: 'Sharpshooter', isHalfFeat: false },
+  { id: 'skill-expert', name: 'Skill Expert', abilityOptions: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'slasher', name: 'Slasher', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'telekinetic', name: 'Telekinetic', abilityOptions: ['intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'telepathic', name: 'Telepathic', abilityOptions: ['intelligence', 'wisdom', 'charisma'], isHalfFeat: true },
+  { id: 'weapon-master', name: 'Weapon Master', abilityOptions: ['strength', 'dexterity'], isHalfFeat: true },
+  { id: 'savage-attacker', name: 'Savage Attacker', isHalfFeat: false },
+  // Add other feats as needed
+] as const;
+
 // Extended build interface for Build Lab
 interface DetailedBuild {
   id: string;
@@ -117,6 +142,7 @@ export const SimpleBuildLab: React.FC = () => {
     const totalLevel = getTotalLevel();
     const proficiencyBonus = Math.ceil(totalLevel / 4) + 1;
     const selectedFeats = getSelectedFeats();
+    const halfFeatBonuses = getHalfFeatAbilityBonuses();
     let primaryAbilityMod = 0;
     let equipmentBonus = 0;
     let fightingStyleBonus = 0;
@@ -241,6 +267,7 @@ export const SimpleBuildLab: React.FC = () => {
     const primaryClass = classLevels[0]?.class.toLowerCase() || 'fighter';
     const totalLevel = getTotalLevel();
     const selectedFeats = getSelectedFeats();
+    const halfFeatBonuses = getHalfFeatAbilityBonuses();
     
     let damageDice = '1d8'; // Default if no weapon
     let abilityMod = 0;
@@ -320,10 +347,10 @@ export const SimpleBuildLab: React.FC = () => {
       }
     }
     
-    // Rogue Sneak Attack
+    // Rogue Sneak Attack (once per turn, not per attack)
     const sneakAttackDice = getSneakAttackDice();
     if (sneakAttackDice > 0) {
-      extraDamage.push(`Sneak+${sneakAttackDice}d6`);
+      extraDamage.push(`Sneak+${sneakAttackDice}d6/turn`);
     }
     
     // Paladin Divine Smite (level 1 slot assumption)
