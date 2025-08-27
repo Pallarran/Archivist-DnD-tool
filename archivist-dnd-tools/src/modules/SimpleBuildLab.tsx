@@ -10,6 +10,14 @@ import { ClassLevelForm } from '../components/forms/ClassLevelForm';
 import { EquipmentForm } from '../components/forms/EquipmentForm';
 import { ClassFeatureDisplay, type FeatureSelection } from '../components/forms/ClassFeatureDisplay';
 import type { Equipment, ClassLevel } from '../types/build';
+import { 
+  calculateClassResources, 
+  optimizeSpellSlotUsage, 
+  analyzeSpellSynergies,
+  getMulticlassSpellSlots,
+  calculateMulticlassSpellcasterLevel,
+  type ClassResources
+} from '../utils/multiclassSpellcasting';
 
 // Import feats for half-feat ability score handling
 const COMMON_FEATS = [
@@ -348,6 +356,46 @@ export const SimpleBuildLab: React.FC = () => {
     return bonusAttacks;
   };
 
+  // Calculate all resources for the current build
+  const calculateResources = (): ClassResources => {
+    const totalLevel = getTotalLevel();
+    const mockBuild: SimpleBuild = {
+      id: 'current',
+      name: buildName,
+      level: totalLevel,
+      attackBonus: 0,
+      damage: '',
+      createdAt: new Date().toISOString(),
+      race: buildRace,
+      background: buildBackground,
+      abilityScores,
+      classLevels,
+      equipment,
+      featureSelections,
+      notes: ''
+    };
+    
+    return calculateClassResources(mockBuild, totalLevel);
+  };
+
+  // Calculate resource optimization
+  const getResourceOptimization = () => {
+    const resources = calculateResources();
+    const spellAttackBonus = getAttackBonus(); // Approximation
+    const spellSaveDC = 8 + Math.ceil(getTotalLevel() / 4) + 1 + Math.max(
+      getAbilityModifier(abilityScores.intelligence),
+      getAbilityModifier(abilityScores.wisdom),
+      getAbilityModifier(abilityScores.charisma)
+    );
+    
+    return optimizeSpellSlotUsage(resources, 15, spellAttackBonus, spellSaveDC);
+  };
+
+  // Analyze multiclass synergies
+  const getMulticlassSynergies = () => {
+    return analyzeSpellSynergies(classLevels);
+  };
+
   // Calculate Sneak Attack dice for rogues
   const getSneakAttackDice = (): number => {
     const rogueLevel = classLevels.find(cl => cl.class.toLowerCase() === 'rogue')?.level || 0;
@@ -521,6 +569,76 @@ export const SimpleBuildLab: React.FC = () => {
     }
     
     return damageString;
+  };
+
+  // Calculate spellcasting information
+  const calculateSpellcasting = (): {
+    hasSpells: boolean;
+    spellSlots: Record<number, number>;
+    spellAttackBonus: number;
+    spellSaveDC: number;
+    casterLevel: number;
+    warlockSlots: { level: number; slots: number } | null;
+    resources: string[];
+    synergies: string[];
+  } => {
+    const resources = calculateResources();
+    const synergies = getMulticlassSynergies();
+    const casterLevel = calculateMulticlassSpellcasterLevel(classLevels);
+    const hasSpells = casterLevel > 0 || resources.warlockSlots !== null;
+    
+    // Calculate spell attack bonus and save DC
+    const primarySpellMod = Math.max(
+      getAbilityModifier(abilityScores.intelligence),
+      getAbilityModifier(abilityScores.wisdom),
+      getAbilityModifier(abilityScores.charisma)
+    );
+    const profBonus = Math.ceil(getTotalLevel() / 4) + 1;
+    const spellAttackBonus = profBonus + primarySpellMod;
+    const spellSaveDC = 8 + profBonus + primarySpellMod;
+    
+    // Format resource strings
+    const resourceStrings: string[] = [];
+    
+    if (Object.keys(resources.spellSlots).length > 0) {
+      const slotStrings = Object.entries(resources.spellSlots)
+        .filter(([level, slots]) => slots > 0)
+        .map(([level, slots]) => `${slots}×${level}${level === '1' ? 'st' : level === '2' ? 'nd' : level === '3' ? 'rd' : 'th'}`);
+      if (slotStrings.length > 0) {
+        resourceStrings.push(`Slots: ${slotStrings.join(', ')}`);
+      }
+    }
+    
+    if (resources.warlockSlots) {
+      resourceStrings.push(`Warlock: ${resources.warlockSlots.slots}×${resources.warlockSlots.level}${resources.warlockSlots.level === 1 ? 'st' : resources.warlockSlots.level === 2 ? 'nd' : resources.warlockSlots.level === 3 ? 'rd' : 'th'}`);
+    }
+    
+    if (resources.sorceryPoints > 0) {
+      resourceStrings.push(`Sorcery Points: ${resources.sorceryPoints}`);
+    }
+    
+    if (resources.kiPoints > 0) {
+      resourceStrings.push(`Ki: ${resources.kiPoints}`);
+    }
+    
+    if (resources.rageUses > 0) {
+      resourceStrings.push(`Rage: ${resources.rageUses === 999 ? '∞' : resources.rageUses}`);
+    }
+    
+    if (resources.superiorityDice > 0) {
+      resourceStrings.push(`Superiority Dice: ${resources.superiorityDice}`);
+    }
+    
+    return {
+      hasSpells,
+      spellSlots: resources.spellSlots,
+      spellAttackBonus,
+      spellSaveDC,
+      casterLevel,
+      warlockSlots: resources.warlockSlots,
+      resources: resourceStrings,
+      synergies: synergies.synergies
+    };
   };
 
   const calculateArmorClass = (): number => {
@@ -909,6 +1027,31 @@ export const SimpleBuildLab: React.FC = () => {
                     Classes: {classLevels.map(cl => `${cl.class} ${cl.level}`).join(', ')}
                   </p>
                 )}
+                {(() => {
+                  const spellcasting = calculateSpellcasting();
+                  if (spellcasting.hasSpells || spellcasting.resources.length > 0) {
+                    return (
+                      <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                        {spellcasting.hasSpells && (
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            Spell Attack: +{spellcasting.spellAttackBonus} • Spell Save DC: {spellcasting.spellSaveDC}
+                          </p>
+                        )}
+                        {spellcasting.resources.length > 0 && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            {spellcasting.resources.slice(0, 2).join(' • ')}
+                          </p>
+                        )}
+                        {spellcasting.synergies.length > 0 && (
+                          <p className="text-xs text-green-600 dark:text-green-400 mt-1 font-medium">
+                            ⚡ {spellcasting.synergies[0]}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 {equipment.mainHand && (
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                     Weapon: {equipment.mainHand.name} ({equipment.mainHand.damage} {equipment.mainHand.damageType})
@@ -1006,6 +1149,42 @@ export const SimpleBuildLab: React.FC = () => {
                   
                   <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                     <div>Attack: +{build.attackBonus} • Damage: {build.damage}</div>
+                    {(() => {
+                      // Calculate resources for this build
+                      const resources = calculateClassResources(build, build.level);
+                      const spellSlots = getMulticlassSpellSlots(build.classLevels || []);
+                      const resourceStrings: string[] = [];
+                      
+                      if (Object.keys(spellSlots).length > 0) {
+                        const slotStrings = Object.entries(spellSlots)
+                          .filter(([level, slots]) => slots > 0)
+                          .slice(0, 3) // Show only first 3 spell levels
+                          .map(([level, slots]) => `${slots}×${level}`);
+                        if (slotStrings.length > 0) {
+                          resourceStrings.push(`Slots: ${slotStrings.join(', ')}`);
+                        }
+                      }
+                      
+                      if (resources.warlockSlots) {
+                        resourceStrings.push(`Warlock: ${resources.warlockSlots.slots}×${resources.warlockSlots.level}`);
+                      }
+                      
+                      if (resources.sorceryPoints > 0) {
+                        resourceStrings.push(`SP: ${resources.sorceryPoints}`);
+                      }
+                      
+                      if (resources.kiPoints > 0) {
+                        resourceStrings.push(`Ki: ${resources.kiPoints}`);
+                      }
+                      
+                      if (resources.rageUses > 0) {
+                        resourceStrings.push(`Rage: ${resources.rageUses === 999 ? '∞' : resources.rageUses}`);
+                      }
+                      
+                      return resourceStrings.length > 0 && (
+                        <div>{resourceStrings.slice(0, 2).join(' • ')}</div>
+                      );
+                    })()}
                     <div>Created: {new Date(build.createdAt).toLocaleDateString()}</div>
                   </div>
                   

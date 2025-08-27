@@ -14,6 +14,7 @@ import {
 } from '../utils/spellCalculations';
 import { MonteCarloEngine, type CombatScenario, type MonteCarloResults } from '../engine/monteCarlo';
 import { MonteCarloResultsComponent } from '../components/results/MonteCarloResults';
+import { ResourceManager } from '../utils/resourceManagement';
 
 // Combat target interface
 interface Target {
@@ -107,6 +108,57 @@ export const EnhancedDPRSimulator: React.FC = () => {
   const [monteCarloResults, setMonteCarloResults] = useState<MonteCarloResults | null>(null);
   const [isRunningMonteCarlo, setIsRunningMonteCarlo] = useState<boolean>(false);
   const [monteCarloProgress, setMonteCarloProgress] = useState<number>(0);
+
+  // Resource management state
+  const [showResourceManager, setShowResourceManager] = useState<boolean>(false);
+  const [resourceManagers, setResourceManagers] = useState<Record<string, ResourceManager>>({});
+  const [encountersRemaining, setEncountersRemaining] = useState<number>(6);
+  const [currentEncounter, setCurrentEncounter] = useState<number>(1);
+
+  // Calculate critical hit chance based on build features
+  const calculateCritChance = (build: any, advantageState: 'normal' | 'advantage' | 'disadvantage'): number => {
+    if (!build) return 0.05;
+    
+    // Default crit range (20 only)
+    let critRange = 1;
+    
+    // Check for Champion Fighter expanded crit range
+    if (build.classLevels) {
+      const fighterLevel = build.classLevels.find((cl: any) => cl.class.toLowerCase() === 'fighter')?.level || 0;
+      if (build.featureSelections) {
+        const hasChampion = Object.values(build.featureSelections).some((selection: any) => 
+          selection.selections && selection.selections.includes('champion')
+        );
+        
+        if (hasChampion) {
+          if (fighterLevel >= 15) critRange = 3; // 18-20 (Superior Critical)
+          else if (fighterLevel >= 3) critRange = 2; // 19-20 (Improved Critical)
+        }
+      }
+    }
+    
+    const baseCritChance = critRange / 20;
+    
+    // Check for Elven Accuracy
+    const hasElvenAccuracy = build.featureSelections && 
+      Object.values(build.featureSelections).some((selection: any) => 
+        selection.improvements?.feat === 'elven-accuracy'
+      );
+    
+    if (advantageState === 'advantage') {
+      if (hasElvenAccuracy) {
+        // Elven Accuracy: Triple advantage for crit fishing
+        return 1 - Math.pow(1 - baseCritChance, 3);
+      } else {
+        // Regular advantage
+        return 1 - Math.pow(1 - baseCritChance, 2);
+      }
+    } else if (advantageState === 'disadvantage') {
+      return Math.pow(baseCritChance, 2);
+    }
+    
+    return baseCritChance;
+  };
 
   // Calculate comprehensive DPR analysis for all selected builds
   const calculateAllDPR = () => {
@@ -226,7 +278,7 @@ export const EnhancedDPRSimulator: React.FC = () => {
         totalDPR,
         sustainedDPR,
         hitChance: normalHitChance,
-        critChance: 0.05, // Standard 5% crit chance
+        critChance: calculateCritChance(build, 'normal'), // Dynamic crit chance
         advantageStates: {
           normal: combinedNormalDPR,
           advantage: combinedAdvantageDPR,
@@ -475,6 +527,22 @@ export const EnhancedDPRSimulator: React.FC = () => {
     }
   };
 
+  // Initialize resource managers when builds change
+  useEffect(() => {
+    const newResourceManagers: Record<string, ResourceManager> = {};
+    
+    selectedBuilds.forEach((buildId) => {
+      if (buildId && builds.length > 0) {
+        const build = builds.find(b => b.id === buildId);
+        if (build) {
+          newResourceManagers[buildId] = new ResourceManager(build);
+        }
+      }
+    });
+    
+    setResourceManagers(newResourceManagers);
+  }, [selectedBuilds, builds]);
+
   // Auto-calculate when builds or target changes
   useEffect(() => {
     if (selectedBuilds.some(id => id !== null) || builds.length > 0) {
@@ -578,6 +646,12 @@ export const EnhancedDPRSimulator: React.FC = () => {
                 className="px-3 py-2 bg-orange-200 text-orange-700 rounded-md hover:bg-orange-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isRunningMonteCarlo ? 'Running...' : 'Monte Carlo'}
+              </button>
+              <button
+                onClick={() => setShowResourceManager(!showResourceManager)}
+                className="px-3 py-2 bg-green-200 text-green-700 rounded-md hover:bg-green-300 text-sm"
+              >
+                {showResourceManager ? 'Hide' : 'Show'} Resources
               </button>
             </div>
           </div>
@@ -1141,6 +1215,184 @@ export const EnhancedDPRSimulator: React.FC = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Use the Build Lab tab to create detailed character builds with classes, abilities, and equipment.
             </p>
+          </div>
+        )}
+
+        {/* Resource Management Panel */}
+        {showResourceManager && (
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Resource Management & Optimization
+                </h3>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Encounters Remaining:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="8"
+                      value={encountersRemaining}
+                      onChange={(e) => setEncountersRemaining(parseInt(e.target.value) || 1)}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Current Encounter:</label>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{currentEncounter}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {selectedBuilds.map((buildId, index) => {
+                  if (!buildId || !resourceManagers[buildId]) return null;
+
+                  const build = builds.find(b => b.id === buildId);
+                  const manager = resourceManagers[buildId];
+                  const state = manager.getState();
+                  const strategy = manager.getResourceStrategy(encountersRemaining, target.ac);
+                  const efficiency = manager.getEfficiencyAnalysis();
+
+                  return (
+                    <div key={buildId} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                        {build?.name || `Build ${index + 1}`}
+                      </h4>
+
+                      {/* Resource Status */}
+                      <div className="mb-4">
+                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Resources</h5>
+                        <div className="space-y-1 text-xs">
+                          {Object.keys(state.maximum.spellSlots).length > 0 && (
+                            <div className="flex justify-between">
+                              <span>Spell Slots:</span>
+                              <span>
+                                {Object.entries(state.current.spellSlots)
+                                  .filter(([, slots]) => slots > 0)
+                                  .map(([level, slots]) => `${slots}×${level}`)
+                                  .join(', ') || 'None'}
+                              </span>
+                            </div>
+                          )}
+                          {state.maximum.warlockSlots && (
+                            <div className="flex justify-between">
+                              <span>Warlock Slots:</span>
+                              <span>{state.current.warlockSlots?.slots || 0}×{state.current.warlockSlots?.level || 1}</span>
+                            </div>
+                          )}
+                          {state.maximum.sorceryPoints > 0 && (
+                            <div className="flex justify-between">
+                              <span>Sorcery Points:</span>
+                              <span>{state.current.sorceryPoints}/{state.maximum.sorceryPoints}</span>
+                            </div>
+                          )}
+                          {state.maximum.kiPoints > 0 && (
+                            <div className="flex justify-between">
+                              <span>Ki Points:</span>
+                              <span>{state.current.kiPoints}/{state.maximum.kiPoints}</span>
+                            </div>
+                          )}
+                          {state.maximum.rageUses > 0 && (
+                            <div className="flex justify-between">
+                              <span>Rage Uses:</span>
+                              <span>{state.current.rageUses === 999 ? '∞' : state.current.rageUses}/{state.maximum.rageUses === 999 ? '∞' : state.maximum.rageUses}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Strategy Recommendations */}
+                      <div className="mb-4">
+                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Strategy: <span className="capitalize text-blue-600 dark:text-blue-400">{strategy.strategy}</span>
+                        </h5>
+                        <div className="space-y-1">
+                          {strategy.recommendations.slice(0, 2).map((rec, i) => (
+                            <div key={i} className="text-xs text-gray-600 dark:text-gray-400">• {rec}</div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Resource Efficiency */}
+                      {efficiency.mostEfficient !== 'None' && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Efficiency</h5>
+                          <div className="text-xs space-y-1">
+                            <div className="text-green-600 dark:text-green-400">
+                              ↑ {efficiency.mostEfficient}: {efficiency.averageEfficiency[efficiency.mostEfficient]?.toFixed(1) || '0'} DPR
+                            </div>
+                            {efficiency.leastEfficient !== 'None' && efficiency.leastEfficient !== efficiency.mostEfficient && (
+                              <div className="text-red-600 dark:text-red-400">
+                                ↓ {efficiency.leastEfficient}: {efficiency.averageEfficiency[efficiency.leastEfficient]?.toFixed(1) || '0'} DPR
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Rest Buttons */}
+                      <div className="flex space-x-2 mt-4">
+                        <button
+                          onClick={() => {
+                            const benefit = manager.takeShortRest();
+                            addNotification({
+                              type: 'info',
+                              message: `Short Rest: ${Object.entries(benefit.resourcesRestored).map(([k,v]) => `${k} +${v}`).join(', ')}`
+                            });
+                          }}
+                          className="flex-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                        >
+                          Short Rest
+                        </button>
+                        <button
+                          onClick={() => {
+                            const benefit = manager.takeLongRest();
+                            addNotification({
+                              type: 'success',
+                              message: `Long Rest: All resources restored (${benefit.totalValue.toFixed(0)} DPR value)`
+                            });
+                          }}
+                          className="flex-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                        >
+                          Long Rest
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Global Controls */}
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <div className="flex justify-between items-center">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        Object.values(resourceManagers).forEach(manager => manager.nextRound());
+                        setCurrentEncounter(prev => prev + 1);
+                      }}
+                      className="px-3 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-500"
+                    >
+                      Next Round
+                    </button>
+                    <button
+                      onClick={() => {
+                        Object.values(resourceManagers).forEach(manager => manager.nextEncounter());
+                        setCurrentEncounter(prev => prev + 1);
+                      }}
+                      className="px-3 py-2 bg-yellow-200 text-yellow-700 rounded text-sm hover:bg-yellow-300"
+                    >
+                      Next Encounter
+                    </button>
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {encountersRemaining - currentEncounter + 1} encounters remaining
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
