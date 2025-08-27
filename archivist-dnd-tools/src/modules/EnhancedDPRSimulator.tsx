@@ -5,6 +5,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSimpleStore } from '../store/simpleStore';
+import { 
+  SPELL_DATABASE, 
+  calculateSpellDamage, 
+  calculateSpellSaveDC, 
+  calculateSpellAttackBonus,
+  getAvailableSpells 
+} from '../utils/spellCalculations';
+import { MonteCarloEngine, type CombatScenario, type MonteCarloResults } from '../engine/monteCarlo';
+import { MonteCarloResultsComponent } from '../components/results/MonteCarloResults';
 
 // Combat target interface
 interface Target {
@@ -47,6 +56,16 @@ interface BuildResult {
     breakEvenAC: number;
     recommendation: 'use' | 'avoid' | 'neutral';
   };
+  spellDamage?: {
+    weaponDPR: number;
+    spellDPR: number;
+    combinedDPR: number;
+    bestSpells: Array<{
+      name: string;
+      damage: number;
+      type: 'attack' | 'save';
+    }>;
+  };
 }
 
 export const EnhancedDPRSimulator: React.FC = () => {
@@ -82,6 +101,12 @@ export const EnhancedDPRSimulator: React.FC = () => {
   const [showBreakdowns, setShowBreakdowns] = useState<boolean>(false);
   const [activeColumn, setActiveColumn] = useState<number>(0);
   const [showPowerAttackAdvisor, setShowPowerAttackAdvisor] = useState<boolean>(true);
+  
+  // Monte Carlo state
+  const [showMonteCarloModal, setShowMonteCarloModal] = useState<boolean>(false);
+  const [monteCarloResults, setMonteCarloResults] = useState<MonteCarloResults | null>(null);
+  const [isRunningMonteCarlo, setIsRunningMonteCarlo] = useState<boolean>(false);
+  const [monteCarloProgress, setMonteCarloProgress] = useState<number>(0);
 
   // Calculate comprehensive DPR analysis for all selected builds
   const calculateAllDPR = () => {
@@ -105,17 +130,79 @@ export const EnhancedDPRSimulator: React.FC = () => {
       // Parse damage
       let averageDamage = parseDamage(damage);
       
-      // Calculate DPR for each advantage state
-      const normalDPR = normalHitChance * averageDamage;
-      const advantageDPR = advantageHitChance * averageDamage;
-      const disadvantageDPR = disadvantageHitChance * averageDamage;
+      // Calculate weapon DPR for each advantage state
+      const weaponNormalDPR = normalHitChance * averageDamage;
+      const weaponAdvantageDPR = advantageHitChance * averageDamage;
+      const weaponDisadvantageDPR = disadvantageHitChance * averageDamage;
 
-      // Simulate 3-round combat (simplified)
-      const round1DPR = normalDPR; // First round
-      const round2DPR = normalDPR; // Sustained
-      const round3DPR = normalDPR; // Sustained
+      // Calculate spell DPR if build has spells
+      let spellDamageData;
+      let combinedNormalDPR = weaponNormalDPR;
+      let combinedAdvantageDPR = weaponAdvantageDPR;
+      let combinedDisadvantageDPR = weaponDisadvantageDPR;
+      
+      if (build && build.classLevels) {
+        const characterLevel = build.level || 1;
+        const availableSpells = getAvailableSpells(build, characterLevel);
+        
+        if (availableSpells.length > 0) {
+          const spellSaveDC = calculateSpellSaveDC(build, characterLevel);
+          const spellAttackBonus = calculateSpellAttackBonus(build, characterLevel);
+          
+          let bestSpellDPR = 0;
+          const bestSpells: Array<{name: string; damage: number; type: 'attack' | 'save'}> = [];
+          
+          // Calculate damage for available spells
+          availableSpells.forEach(spellName => {
+            const spell = SPELL_DATABASE[spellName.toLowerCase()];
+            if (spell) {
+              const spellSlotLevel = Math.max(spell.level, 1);
+              const spellResult = calculateSpellDamage(
+                spell, 
+                characterLevel, 
+                spellSlotLevel, 
+                target, 
+                spellAttackBonus, 
+                spellSaveDC
+              );
+              
+              if (spellResult.averageDamage > bestSpellDPR) {
+                bestSpellDPR = spellResult.averageDamage;
+              }
+              
+              bestSpells.push({
+                name: spell.name,
+                damage: spellResult.averageDamage,
+                type: spell.damageType || 'attack'
+              });
+            }
+          });
+          
+          // Sort spells by damage
+          bestSpells.sort((a, b) => b.damage - a.damage);
+          bestSpells.splice(3); // Keep only top 3
+          
+          spellDamageData = {
+            weaponDPR: weaponNormalDPR,
+            spellDPR: bestSpellDPR,
+            combinedDPR: weaponNormalDPR + (bestSpellDPR * 0.3), // Assume spells used 30% of the time
+            bestSpells: bestSpells
+          };
+          
+          // Add spell damage to combined DPR (weighted for realistic usage)
+          const spellUsageWeight = 0.3; // 30% spell usage assumption
+          combinedNormalDPR = weaponNormalDPR + (bestSpellDPR * spellUsageWeight);
+          combinedAdvantageDPR = weaponAdvantageDPR + (bestSpellDPR * spellUsageWeight);
+          combinedDisadvantageDPR = weaponDisadvantageDPR + (bestSpellDPR * spellUsageWeight);
+        }
+      }
+
+      // Simulate 3-round combat (with spell consideration)
+      const round1DPR = combinedNormalDPR * 1.2; // First round often has buffs/setup
+      const round2DPR = combinedNormalDPR; // Sustained
+      const round3DPR = combinedNormalDPR * 0.9; // Resources may be depleted
       const totalDPR = round1DPR + round2DPR + round3DPR;
-      const sustainedDPR = normalDPR;
+      const sustainedDPR = combinedNormalDPR;
 
       // Calculate power attack analysis if build exists
       let powerAttackData;
@@ -123,7 +210,7 @@ export const EnhancedDPRSimulator: React.FC = () => {
         const powerAttackAnalysis = getPowerAttackRecommendation(build);
         const powerAttackHitChance = Math.max(0.05, Math.min(0.95, (21 - (target.ac - (attackBonus - 5))) / 20));
         powerAttackData = {
-          normalDPR: normalDPR,
+          normalDPR: weaponNormalDPR,
           powerAttackDPR: powerAttackHitChance * (averageDamage + 10),
           breakEvenAC: powerAttackAnalysis.breakEvenAC,
           recommendation: powerAttackAnalysis.recommendation,
@@ -141,11 +228,12 @@ export const EnhancedDPRSimulator: React.FC = () => {
         hitChance: normalHitChance,
         critChance: 0.05, // Standard 5% crit chance
         advantageStates: {
-          normal: normalDPR,
-          advantage: advantageDPR,
-          disadvantage: disadvantageDPR,
+          normal: combinedNormalDPR,
+          advantage: combinedAdvantageDPR,
+          disadvantage: combinedDisadvantageDPR,
         },
         powerAttack: powerAttackData,
+        spellDamage: spellDamageData,
       });
     });
 
@@ -219,6 +307,108 @@ export const EnhancedDPRSimulator: React.FC = () => {
     const newSelectedBuilds = [...selectedBuilds];
     newSelectedBuilds[columnIndex] = buildId;
     setSelectedBuilds(newSelectedBuilds);
+  };
+
+  // Run Monte Carlo simulation for selected builds
+  const runMonteCarloSimulation = async (buildIndex: number) => {
+    const buildId = selectedBuilds[buildIndex];
+    const build = builds.find(b => b.id === buildId);
+    
+    if (!build) {
+      addNotification({
+        type: 'error',
+        message: 'Please select a build to run Monte Carlo simulation',
+      });
+      return;
+    }
+
+    setIsRunningMonteCarlo(true);
+    setMonteCarloProgress(0);
+
+    try {
+      // Convert simple build to full Build interface for Monte Carlo
+      const fullBuild: any = {
+        id: build.id,
+        name: build.name,
+        levels: build.classLevels || [{ class: 'Fighter', subclass: '', level: build.level || 1, hitDie: 10 }],
+        abilities: build.abilityScores || {
+          strength: 15,
+          dexterity: 14,
+          constitution: 13,
+          intelligence: 12,
+          wisdom: 10,
+          charisma: 8
+        },
+        proficiencyBonus: Math.ceil((build.level || 1) / 4) + 1,
+        equipment: build.equipment || { mainHand: null, offHand: null, armor: null },
+        features: [],
+        spells: [],
+        conditions: [],
+        policies: {
+          smitePolicy: 'optimal' as const,
+          oncePerTurnPriority: 'optimal' as const,
+          precast: [],
+          buffAssumptions: 'moderate' as const,
+          powerAttackThresholdEV: 0.5
+        },
+        spellSlots: {},
+        version: '1.0.0',
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString()
+      };
+
+      // Convert target interface
+      const combatTarget: any = {
+        name: 'Target',
+        armorClass: target.ac,
+        hitPoints: 100,
+        resistances: target.resistances,
+        immunities: target.immunities,
+        vulnerabilities: target.vulnerabilities
+      };
+
+      // Define combat scenario
+      const scenario: CombatScenario = {
+        rounds: 3,
+        encounters: 1,
+        restType: 'none',
+        enemyActions: [
+          {
+            name: 'Attack',
+            probability: 0.8,
+            effect: (state) => {
+              // Enemy attacks, might trigger reactions
+            }
+          }
+        ],
+        environmental: {
+          lighting: 'bright',
+          terrain: 'normal',
+          cover: 'none'
+        }
+      };
+
+      const engine = new MonteCarloEngine(12345); // Fixed seed for consistency
+      const results = await engine.simulate(fullBuild, combatTarget, scenario, 1000); // 1000 runs for demo
+
+      setMonteCarloResults(results);
+      setShowMonteCarloModal(true);
+      
+      addNotification({
+        type: 'success',
+        message: `Monte Carlo simulation completed: ${results.runs} runs analyzed`,
+      });
+
+    } catch (error) {
+      console.error('Monte Carlo simulation error:', error);
+      addNotification({
+        type: 'error',
+        message: 'Monte Carlo simulation failed. Please try again.',
+      });
+    } finally {
+      setIsRunningMonteCarlo(false);
+      setMonteCarloProgress(0);
+    }
   };
 
   // Auto-calculate when builds or target changes
@@ -317,6 +507,13 @@ export const EnhancedDPRSimulator: React.FC = () => {
                 className="px-3 py-2 bg-purple-200 text-purple-700 rounded-md hover:bg-purple-300 text-sm"
               >
                 {showPowerAttackAdvisor ? 'Hide' : 'Show'} Power Attack
+              </button>
+              <button
+                onClick={() => runMonteCarloSimulation(0)}
+                disabled={!selectedBuilds[0] || isRunningMonteCarlo}
+                className="px-3 py-2 bg-orange-200 text-orange-700 rounded-md hover:bg-orange-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isRunningMonteCarlo ? 'Running...' : 'Monte Carlo'}
               </button>
             </div>
           </div>
@@ -526,6 +723,19 @@ export const EnhancedDPRSimulator: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Monte Carlo Button */}
+              {selectedBuilds[0] && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => runMonteCarloSimulation(0)}
+                    disabled={isRunningMonteCarlo}
+                    className="w-full px-4 py-2 bg-orange-100 text-orange-700 border border-orange-300 rounded-md hover:bg-orange-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isRunningMonteCarlo ? 'Running Simulation...' : '🎲 Run Monte Carlo Analysis'}
+                  </button>
                 </div>
               )}
             </div>
@@ -868,6 +1078,18 @@ export const EnhancedDPRSimulator: React.FC = () => {
               Use the Build Lab tab to create detailed character builds with classes, abilities, and equipment.
             </p>
           </div>
+        )}
+
+        {/* Monte Carlo Results Modal */}
+        {showMonteCarloModal && monteCarloResults && (
+          <MonteCarloResultsComponent
+            results={monteCarloResults}
+            buildName={monteCarloResults.scenario ? 'Selected Build' : 'Unknown Build'}
+            onClose={() => {
+              setShowMonteCarloModal(false);
+              setMonteCarloResults(null);
+            }}
+          />
         )}
       </div>
     </div>
