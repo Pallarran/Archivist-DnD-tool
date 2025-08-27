@@ -247,10 +247,11 @@ export const EnhancedDPRSimulator: React.FC = () => {
     }
   };
 
-  // Parse damage string into average damage accounting for multiple attacks
+  // Parse damage string into average damage accounting for multiple attacks and features
   const parseDamage = (damage: string): number => {
     try {
       let baseDamage = 0;
+      let extraDamage = 0;
       let attackMultiplier = 1;
 
       // Check for attack multiplier (e.g., "1d8+5 (×2 attacks)")
@@ -259,6 +260,7 @@ export const EnhancedDPRSimulator: React.FC = () => {
         attackMultiplier = parseInt(attackMatch[1]) || 1;
       }
 
+      // Parse base weapon damage
       if (damage.includes('d')) {
         const match = damage.match(/(\d+)d(\d+)(?:\+(\d+))?(?:\-(\d+))?/);
         if (match) {
@@ -270,8 +272,59 @@ export const EnhancedDPRSimulator: React.FC = () => {
       } else {
         baseDamage = parseFloat(damage) || 0;
       }
+      
+      // Parse extra damage sources from parentheses
+      const extraDamageMatch = damage.match(/\(([^×]+)\)/);
+      if (extraDamageMatch) {
+        const extraDamageString = extraDamageMatch[1];
+        
+        // Sneak Attack damage (e.g., "Sneak+3d6")
+        const sneakMatch = extraDamageString.match(/Sneak\+(\d+)d6/);
+        if (sneakMatch) {
+          const sneakDice = parseInt(sneakMatch[1]);
+          extraDamage += sneakDice * 3.5; // Average of 1d6
+        }
+        
+        // Rage damage (e.g., "Rage+2")
+        const rageMatch = extraDamageString.match(/Rage\+(\d+)/);
+        if (rageMatch) {
+          extraDamage += parseInt(rageMatch[1]);
+        }
+        
+        // Divine Smite (e.g., "Smite+2d8")
+        const smiteMatch = extraDamageString.match(/Smite\+(\d+)d8/);
+        if (smiteMatch) {
+          const smiteDice = parseInt(smiteMatch[1]);
+          extraDamage += smiteDice * 4.5; // Average of 1d8
+        }
+        
+        // Great Weapon Master/Sharpshooter (e.g., "GWM+10", "SS+10")
+        const powerAttackMatch = extraDamageString.match(/(?:GWM|SS)\+(\d+)/);
+        if (powerAttackMatch) {
+          extraDamage += parseInt(powerAttackMatch[1]);
+        }
+        
+        // Great Weapon Fighting (e.g., "GWF+0.8")
+        const gwfMatch = extraDamageString.match(/GWF\+([\d.]+)/);
+        if (gwfMatch) {
+          extraDamage += parseFloat(gwfMatch[1]);
+        }
+        
+        // Piercer feat (e.g., "Pierce+1d")
+        const pierceMatch = extraDamageString.match(/Pierce\+(\d+)d/);
+        if (pierceMatch) {
+          // Assumes rerolling the weapon's damage die
+          extraDamage += parseInt(pierceMatch[1]) * 1; // Conservative estimate
+        }
+        
+        // Savage Attacker (e.g., "Savage+0.5d")
+        const savageMatch = extraDamageString.match(/Savage\+([\d.]+)d/);
+        if (savageMatch) {
+          extraDamage += parseFloat(savageMatch[1]) * 4; // Assuming d8 average
+        }
+      }
 
-      return baseDamage * attackMultiplier;
+      return (baseDamage + extraDamage) * attackMultiplier;
     } catch (e) {
       return 8; // Default
     }

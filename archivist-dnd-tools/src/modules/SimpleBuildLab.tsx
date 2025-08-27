@@ -113,12 +113,14 @@ export const SimpleBuildLab: React.FC = () => {
   };
   
   const calculateAttackBonus = (): number => {
-    // Attack bonus calculation: proficiency bonus + ability modifier + equipment bonus + fighting style bonus
+    // Attack bonus calculation: proficiency bonus + ability modifier + equipment bonus + fighting style bonus + feat bonuses
     const totalLevel = getTotalLevel();
     const proficiencyBonus = Math.ceil(totalLevel / 4) + 1;
+    const selectedFeats = getSelectedFeats();
     let primaryAbilityMod = 0;
     let equipmentBonus = 0;
     let fightingStyleBonus = 0;
+    let featBonus = 0;
 
     // Get weapon for primary attack
     const weapon = equipment.mainHand;
@@ -179,19 +181,73 @@ export const SimpleBuildLab: React.FC = () => {
     if (weapon?.toHitBonus) {
       equipmentBonus += weapon.toHitBonus;
     }
+    
+    // Feat penalties (power attack features)
+    // Note: This shows the penalty in the attack bonus, but in actual combat
+    // the player chooses whether to use power attack each turn
+    if (selectedFeats.includes('great-weapon-master') && weapon && weapon.properties.some(p => ['heavy', 'two-handed'].includes(p))) {
+      // Don't apply penalty by default - this is a choice
+      // featBonus -= 5; 
+    }
+    if (selectedFeats.includes('sharpshooter') && weapon && weapon.type === 'ranged') {
+      // Don't apply penalty by default - this is a choice  
+      // featBonus -= 5;
+    }
+    
+    // Other feat bonuses
+    // Most feats don't provide direct attack bonuses, but some half-feats boost ability scores
+    // which are already included in the ability modifier calculation
 
-    return proficiencyBonus + primaryAbilityMod + equipmentBonus + fightingStyleBonus;
+    return proficiencyBonus + primaryAbilityMod + equipmentBonus + fightingStyleBonus + featBonus;
+  };
+
+  // Get selected feats from feature selections
+  const getSelectedFeats = (): string[] => {
+    const feats: string[] = [];
+    Object.values(featureSelections).forEach(selection => {
+      if (selection.improvements?.type === 'feat' && selection.improvements.feat) {
+        feats.push(selection.improvements.feat);
+      }
+    });
+    return feats;
+  };
+
+  // Calculate Sneak Attack dice for rogues
+  const getSneakAttackDice = (): number => {
+    const rogueLevel = classLevels.find(cl => cl.class.toLowerCase() === 'rogue')?.level || 0;
+    if (rogueLevel === 0) return 0;
+    return Math.ceil(rogueLevel / 2); // 1d6 at level 1, +1d6 every 2 levels
+  };
+
+  // Calculate Rage damage bonus for barbarians
+  const getRageDamageBonus = (): number => {
+    const barbarianLevel = classLevels.find(cl => cl.class.toLowerCase() === 'barbarian')?.level || 0;
+    if (barbarianLevel === 0) return 0;
+    if (barbarianLevel >= 16) return 4;
+    if (barbarianLevel >= 9) return 3;
+    return 2; // Base rage damage at levels 1-8
+  };
+
+  // Check if build has specific features
+  const hasFeature = (featureId: string): boolean => {
+    return Object.values(featureSelections).some(selection => 
+      selection.selections && selection.selections.includes(featureId)
+    );
   };
 
   const calculateDamage = (): string => {
     // Damage calculation based on equipped weapon and abilities
     const weapon = equipment.mainHand;
     const primaryClass = classLevels[0]?.class.toLowerCase() || 'fighter';
+    const totalLevel = getTotalLevel();
+    const selectedFeats = getSelectedFeats();
     
     let damageDice = '1d8'; // Default if no weapon
     let abilityMod = 0;
     let equipmentBonus = 0;
     let fightingStyleBonus = 0;
+    let featureBonus = 0;
+    let extraDamage: string[] = [];
     
     // Get weapon damage dice
     if (weapon?.damage) {
@@ -234,8 +290,17 @@ export const SimpleBuildLab: React.FC = () => {
         fightingStyleBonus += 2;
       }
     }
-    // Note: Two-weapon fighting adds ability mod to off-hand attacks, which we don't calculate here
-    // Note: Great weapon fighting allows rerolling 1s and 2s, which is hard to represent as a flat bonus
+    
+    // Great Weapon Fighting: Average damage increase (approximately +0.83 per die)
+    if (fightingStyles.includes('great-weapon-fighting') && weapon) {
+      if (weapon.damage.includes('d12')) {
+        extraDamage.push('GWF+0.8'); // Approximate boost for d12
+      } else if (weapon.damage.includes('d10')) {
+        extraDamage.push('GWF+0.7'); // Approximate boost for d10
+      } else if (weapon.damage.includes('2d6')) {
+        extraDamage.push('GWF+1.3'); // Approximate boost for 2d6
+      }
+    }
     
     // Add equipment bonuses
     if (weapon?.magic) {
@@ -245,11 +310,61 @@ export const SimpleBuildLab: React.FC = () => {
       equipmentBonus += weapon.damageBonus;
     }
     
+    // Class feature bonuses
+    // Barbarian Rage damage
+    if (primaryClass === 'barbarian') {
+      const rageDamage = getRageDamageBonus();
+      if (rageDamage > 0) {
+        featureBonus += rageDamage;
+        extraDamage.push(`Rage+${rageDamage}`);
+      }
+    }
+    
+    // Rogue Sneak Attack
+    const sneakAttackDice = getSneakAttackDice();
+    if (sneakAttackDice > 0) {
+      extraDamage.push(`Sneak+${sneakAttackDice}d6`);
+    }
+    
+    // Paladin Divine Smite (level 1 slot assumption)
+    if (primaryClass === 'paladin' && totalLevel >= 2) {
+      extraDamage.push('Smite+2d8');
+    }
+    
+    // Feat bonuses
+    // Great Weapon Master / Sharpshooter power attack
+    if (selectedFeats.includes('great-weapon-master') && weapon && weapon.properties.some(p => ['heavy', 'two-handed'].includes(p))) {
+      extraDamage.push('GWM+10');
+    }
+    if (selectedFeats.includes('sharpshooter') && weapon && weapon.type === 'ranged') {
+      extraDamage.push('SS+10');
+    }
+    
+    // Piercer feat
+    if (selectedFeats.includes('piercer') && weapon && weapon.properties.includes('piercing')) {
+      extraDamage.push('Pierce+1d');
+    }
+    
+    // Slasher feat doesn't add direct damage but affects battlefield control
+    // Savage Attacker feat allows rerolling damage dice once per turn
+    if (selectedFeats.includes('savage-attacker')) {
+      extraDamage.push('Savage+0.5d'); // Approximate damage boost
+    }
+    
+    // Half-feats that boost ability scores (already included in ability mods)
+    // Alert, Lucky, Mobile, etc. don't directly affect damage
+    
     const totalBonus = abilityMod + equipmentBonus + fightingStyleBonus;
     const extraAttacks = getExtraAttacks();
     const totalAttacks = 1 + extraAttacks;
     
     let damageString = totalBonus > 0 ? `${damageDice}+${totalBonus}` : `${damageDice}${totalBonus}`;
+    
+    // Add extra damage sources
+    if (extraDamage.length > 0) {
+      damageString += ` (${extraDamage.join(', ')})`;
+    }
+    
     if (totalAttacks > 1) {
       damageString += ` (×${totalAttacks} attacks)`;
     }

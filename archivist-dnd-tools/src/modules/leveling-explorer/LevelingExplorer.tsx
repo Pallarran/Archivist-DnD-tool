@@ -23,13 +23,86 @@ export const LevelingExplorer: React.FC = () => {
   const builds = useSimpleStore((state) => state.builds);
   const { addNotification } = useSimpleStore();
 
-  // Simplified build analysis function
+  // Get selected feats from build
+  const getSelectedFeats = (build: SimpleBuild): string[] => {
+    const feats: string[] = [];
+    if (build.featureSelections) {
+      Object.values(build.featureSelections).forEach(selection => {
+        if (selection.improvements?.type === 'feat' && selection.improvements.feat) {
+          feats.push(selection.improvements.feat);
+        }
+      });
+    }
+    return feats;
+  };
+  
+  // Get fighting styles from build
+  const getFightingStyles = (build: SimpleBuild): string[] => {
+    const styles: string[] = [];
+    if (build.featureSelections) {
+      Object.values(build.featureSelections).forEach(selection => {
+        if (selection.selections) {
+          selection.selections.forEach(selectionId => {
+            if (['archery', 'defense', 'dueling', 'great-weapon-fighting', 'protection', 'two-weapon-fighting'].includes(selectionId)) {
+              styles.push(selectionId);
+            }
+          });
+        }
+      });
+    }
+    return styles;
+  };
+  
+  // Calculate feature-based damage at a given level
+  const calculateFeatureDamage = (build: SimpleBuild, characterLevel: number): { bonus: number; extraDamage: string[] } => {
+    let bonus = 0;
+    const extraDamage: string[] = [];
+    const selectedFeats = getSelectedFeats(build);
+    
+    // Sneak Attack for Rogues
+    const rogueLevel = build.classLevels?.find(cl => cl.class.toLowerCase() === 'rogue')?.level || 0;
+    if (rogueLevel > 0) {
+      const sneakDice = Math.ceil(rogueLevel / 2);
+      extraDamage.push(`Sneak+${sneakDice}d6`);
+    }
+    
+    // Rage damage for Barbarians
+    const barbarianLevel = build.classLevels?.find(cl => cl.class.toLowerCase() === 'barbarian')?.level || 0;
+    if (barbarianLevel > 0) {
+      let rageDamage = 2; // Base rage damage
+      if (barbarianLevel >= 16) rageDamage = 4;
+      else if (barbarianLevel >= 9) rageDamage = 3;
+      bonus += rageDamage;
+      extraDamage.push(`Rage+${rageDamage}`);
+    }
+    
+    // Divine Smite for Paladins (level 1 slot assumption)
+    const paladinLevel = build.classLevels?.find(cl => cl.class.toLowerCase() === 'paladin')?.level || 0;
+    if (paladinLevel >= 2) {
+      extraDamage.push('Smite+2d8');
+    }
+    
+    // Great Weapon Master / Sharpshooter feats
+    const weapon = build.equipment?.mainHand;
+    if (selectedFeats.includes('great-weapon-master') && weapon && weapon.properties?.some(p => ['heavy', 'two-handed'].includes(p))) {
+      extraDamage.push('GWM+10');
+    }
+    if (selectedFeats.includes('sharpshooter') && weapon && weapon.type === 'ranged') {
+      extraDamage.push('SS+10');
+    }
+    
+    return { bonus, extraDamage };
+  };
+
+  // Enhanced build analysis function with feature integration
   const analyzeBuildProgression = (build: SimpleBuild): SimpleLevelAnalysis[] => {
     if (!build.classLevels || !build.abilityScores) {
       return [];
     }
 
     const results: SimpleLevelAnalysis[] = [];
+    const selectedFeats = getSelectedFeats(build);
+    const fightingStyles = getFightingStyles(build);
     
     for (let level = 1; level <= 20; level++) {
       const proficiencyBonus = Math.ceil(level / 4) + 1;
@@ -39,47 +112,110 @@ export const LevelingExplorer: React.FC = () => {
       const conMod = Math.floor((build.abilityScores.constitution - 10) / 2);
       const hitPointsAverage = Math.max(1, (hitDie / 2 + 0.5) + conMod) + (level - 1) * (hitDie / 2 + 0.5 + conMod);
       
-      // Calculate attack bonus (simplified)
+      // Calculate attack bonus with fighting style bonuses
       let abilityMod = Math.floor((build.abilityScores.strength - 10) / 2);
       if (build.equipment?.mainHand?.type === 'ranged') {
         abilityMod = Math.floor((build.abilityScores.dexterity - 10) / 2);
       }
       
-      const attackBonus = proficiencyBonus + abilityMod + (build.equipment?.mainHand?.magic || 0);
+      let attackBonus = proficiencyBonus + abilityMod + (build.equipment?.mainHand?.magic || 0);
       
-      // Calculate extra attacks based on total character level
-      let extraAttacks = 0;
-      if (build.classLevels && build.classLevels.length > 0) {
-        const fighterLevel = build.classLevels.find(cl => cl.class === 'fighter')?.level || 0;
-        if (fighterLevel >= 20) extraAttacks = 3;
-        else if (fighterLevel >= 11) extraAttacks = 2;
-        else if (fighterLevel >= 5) extraAttacks = 1;
-        else if (['barbarian', 'paladin', 'ranger'].includes(build.classLevels[0]?.class) && level >= 5) {
-          extraAttacks = 1;
-        }
+      // Apply fighting style bonuses
+      if (fightingStyles.includes('archery') && build.equipment?.mainHand?.type === 'ranged') {
+        attackBonus += 2;
       }
       
-      // Calculate damage (simplified)
-      const baseDamage = build.equipment?.mainHand?.damage || '1d8';
-      const damage = `${baseDamage}+${abilityMod}${extraAttacks > 0 ? ` (×${extraAttacks + 1} attacks)` : ''}`;
+      // Calculate extra attacks based on class levels at this character level
+      let extraAttacks = 0;
+      if (build.classLevels && build.classLevels.length > 0) {
+        // Scale class levels proportionally to character level
+        const totalLevels = build.classLevels.reduce((sum, cl) => sum + cl.level, 0);
+        const levelRatio = level / totalLevels;
+        
+        build.classLevels.forEach(classLevel => {
+          const scaledLevel = Math.min(20, Math.floor(classLevel.level * levelRatio));
+          const className = classLevel.class.toLowerCase();
+          
+          if (className === 'fighter') {
+            if (scaledLevel >= 20) extraAttacks += 3;
+            else if (scaledLevel >= 11) extraAttacks += 2;
+            else if (scaledLevel >= 5) extraAttacks += 1;
+          } else if (['barbarian', 'paladin', 'ranger'].includes(className) && scaledLevel >= 5) {
+            extraAttacks += 1;
+          }
+        });
+      }
       
-      // Calculate DPR
+      // Calculate feature-based damage
+      const featureDamage = calculateFeatureDamage(build, level);
+      
+      // Calculate damage with all bonuses
+      const baseDamage = build.equipment?.mainHand?.damage || '1d8';
+      let damageBonus = abilityMod + featureDamage.bonus;
+      
+      // Apply fighting style damage bonuses
+      if (fightingStyles.includes('dueling') && build.equipment?.mainHand && !build.equipment?.offHand) {
+        damageBonus += 2;
+      }
+      
+      let damage = `${baseDamage}+${damageBonus}`;
+      if (featureDamage.extraDamage.length > 0) {
+        damage += ` (${featureDamage.extraDamage.join(', ')})`;
+      }
+      if (extraAttacks > 0) {
+        damage += ` (×${extraAttacks + 1} attacks)`;
+      }
+      
+      // Enhanced DPR calculation
       const parseDamage = (damageStr: string): number => {
+        let totalDamage = 0;
+        
+        // Base weapon damage
         const match = damageStr.match(/(\d+)d(\d+)(?:\+(\d+))?/);
         if (match) {
           const [, numDice, dieSize, bonus] = match;
-          return parseInt(numDice) * (parseInt(dieSize) + 1) / 2 + (parseInt(bonus) || 0);
+          totalDamage = parseInt(numDice) * (parseInt(dieSize) + 1) / 2 + (parseInt(bonus) || 0);
         }
-        return 8;
+        
+        // Add feature damage
+        const extraMatch = damageStr.match(/\(([^×]+)\)/);
+        if (extraMatch) {
+          const extraStr = extraMatch[1];
+          
+          // Sneak Attack
+          const sneakMatch = extraStr.match(/Sneak\+(\d+)d6/);
+          if (sneakMatch) totalDamage += parseInt(sneakMatch[1]) * 3.5;
+          
+          // Rage
+          const rageMatch = extraStr.match(/Rage\+(\d+)/);
+          if (rageMatch) totalDamage += parseInt(rageMatch[1]);
+          
+          // Smite
+          const smiteMatch = extraStr.match(/Smite\+(\d+)d8/);
+          if (smiteMatch) totalDamage += parseInt(smiteMatch[1]) * 4.5;
+          
+          // Power attacks
+          const powerMatch = extraStr.match(/(?:GWM|SS)\+(\d+)/);
+          if (powerMatch) totalDamage += parseInt(powerMatch[1]);
+        }
+        
+        return totalDamage;
       };
       
-      const avgDamage = parseDamage(baseDamage) + abilityMod;
+      const avgDamage = parseDamage(damage);
       const totalAttacks = extraAttacks + 1;
       const hitChance = Math.max(0.05, Math.min(0.95, (21 - (15 - attackBonus)) / 20)); // vs AC 15
       
       const normalDPR = avgDamage * totalAttacks * hitChance;
       const advantageDPR = avgDamage * totalAttacks * (1 - Math.pow(1 - hitChance, 2));
       const disadvantageDPR = avgDamage * totalAttacks * Math.pow(hitChance, 2);
+      
+      // Extract notable features for this level
+      const features: string[] = [];
+      if (level % 4 === 0) features.push('ASI/Feat');
+      if (level === 5 && extraAttacks > 0) features.push('Extra Attack');
+      if (level === 11 && build.classLevels?.some(cl => cl.class.toLowerCase() === 'fighter')) features.push('Extra Attack (2)');
+      if (rogueLevel > 0 && level % 2 === 1) features.push(`Sneak Attack (${Math.ceil(level/2)}d6)`);
       
       results.push({
         level,
@@ -93,7 +229,7 @@ export const LevelingExplorer: React.FC = () => {
           advantage: advantageDPR,
           disadvantage: disadvantageDPR
         },
-        features: [] // TODO: Extract from feature selections
+        features
       });
     }
     
