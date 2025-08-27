@@ -47,14 +47,16 @@ export const LevelingExplorer: React.FC = () => {
       
       const attackBonus = proficiencyBonus + abilityMod + (build.equipment?.mainHand?.magic || 0);
       
-      // Calculate extra attacks
+      // Calculate extra attacks based on total character level
       let extraAttacks = 0;
-      const fighterLevel = build.classLevels.find(cl => cl.class === 'fighter')?.level || 0;
-      if (fighterLevel >= 20) extraAttacks = 3;
-      else if (fighterLevel >= 11) extraAttacks = 2;
-      else if (fighterLevel >= 5) extraAttacks = 1;
-      else if (['barbarian', 'paladin', 'ranger'].includes(build.classLevels[0]?.class) && level >= 5) {
-        extraAttacks = 1;
+      if (build.classLevels && build.classLevels.length > 0) {
+        const fighterLevel = build.classLevels.find(cl => cl.class === 'fighter')?.level || 0;
+        if (fighterLevel >= 20) extraAttacks = 3;
+        else if (fighterLevel >= 11) extraAttacks = 2;
+        else if (fighterLevel >= 5) extraAttacks = 1;
+        else if (['barbarian', 'paladin', 'ranger'].includes(build.classLevels[0]?.class) && level >= 5) {
+          extraAttacks = 1;
+        }
       }
       
       // Calculate damage (simplified)
@@ -130,7 +132,7 @@ export const LevelingExplorer: React.FC = () => {
     });
     
     setLevelAnalyses(analyses);
-  }, [selectedBuilds, builds]);
+  }, [selectedBuilds, builds, addNotification]);
 
   // Draw DPR chart
   useEffect(() => {
@@ -224,15 +226,15 @@ export const LevelingExplorer: React.FC = () => {
       
       ctx.stroke();
       
-      // Draw breakpoint markers
+      // Draw level markers (simplified - every 5th level)
       ctx.fillStyle = color;
       analysis.forEach((level, index) => {
-        if (level.breakpoints.majorFeature || level.breakpoints.asi || level.breakpoints.spellLevel) {
+        if (level.level % 5 === 0) {
           const x = margin.left + index * (chartWidth / 19);
           const y = margin.top + chartHeight - (level.dpr[advantageState] / maxDPR) * chartHeight;
           
           ctx.beginPath();
-          ctx.arc(x, y, 4, 0, 2 * Math.PI);
+          ctx.arc(x, y, 3, 0, 2 * Math.PI);
           ctx.fill();
         }
       });
@@ -312,14 +314,13 @@ export const LevelingExplorer: React.FC = () => {
   };
 
   // Calculate DPR against different AC values for sensitivity analysis
-  const calculateACAnalysis = (build: any, level: number, levelData: LevelAnalysis) => {
-    const proficiencyBonus = levelData.proficiencyBonus;
-    const attackBonus = proficiencyBonus + getAbilityModifier(build.abilities.strength, build.abilities.dexterity);
+  const calculateACAnalysis = (build: SimpleBuild, level: number, levelData: SimpleLevelAnalysis) => {
+    const attackBonus = levelData.attackBonus;
     
     const weapon = build.equipment?.mainHand;
-    const baseDamage = weapon ? parseDamageString(weapon.damage) : 8;
-    const damageBonus = getAbilityModifier(build.abilities.strength, build.abilities.dexterity);
-    const totalDamage = (baseDamage + damageBonus) * levelData.attacksPerAction;
+    const baseDamage = weapon ? parseDamageString(weapon.damage) : 4.5;
+    const abilityMod = Math.floor((Math.max(build.abilityScores?.strength || 10, build.abilityScores?.dexterity || 10) - 10) / 2);
+    const totalDamage = (baseDamage + abilityMod) * (levelData.extraAttacks + 1);
     
     const calculateDPRForAC = (targetAC: number) => {
       const hitChance = Math.max(0.05, Math.min(0.95, (21 - (targetAC - attackBonus)) / 20));
@@ -369,12 +370,11 @@ export const LevelingExplorer: React.FC = () => {
       if (!levelData) return;
       
       const colors = ['#3b82f6', '#ef4444', '#10b981'];
-      const proficiencyBonus = levelData.proficiencyBonus;
-      const attackBonus = proficiencyBonus + getAbilityModifier(build.abilities.strength, build.abilities.dexterity);
+      const attackBonus = levelData.attackBonus;
       const weapon = build.equipment?.mainHand;
-      const baseDamage = weapon ? parseDamageString(weapon.damage) : 8;
-      const damageBonus = getAbilityModifier(build.abilities.strength, build.abilities.dexterity);
-      const totalDamage = (baseDamage + damageBonus) * levelData.attacksPerAction;
+      const baseDamage = weapon ? parseDamageString(weapon.damage) : 4.5;
+      const abilityMod = Math.floor((Math.max(build.abilityScores?.strength || 10, build.abilityScores?.dexterity || 10) - 10) / 2);
+      const totalDamage = (baseDamage + abilityMod) * (levelData.extraAttacks + 1);
       
       const dprData = acRange.map(ac => {
         const hitChance = Math.max(0.05, Math.min(0.95, (21 - (ac - attackBonus)) / 20));
@@ -476,18 +476,18 @@ export const LevelingExplorer: React.FC = () => {
   };
 
   // Generate detailed mathematical trace for DPR calculation
-  const generateDPRTrace = (build: any, levelData: LevelAnalysis) => {
+  const generateDPRTrace = (build: SimpleBuild, levelData: SimpleLevelAnalysis) => {
     const trace: Array<{step: string; formula: string; result: string; explanation: string}> = [];
     
     // Step 1: Basic stats
     const proficiencyBonus = levelData.proficiencyBonus;
-    const strMod = Math.floor((build.abilities.strength - 10) / 2);
-    const dexMod = Math.floor((build.abilities.dexterity - 10) / 2);
+    const strMod = Math.floor(((build.abilityScores?.strength || 10) - 10) / 2);
+    const dexMod = Math.floor(((build.abilityScores?.dexterity || 10) - 10) / 2);
     const primaryMod = Math.max(strMod, dexMod);
     
     trace.push({
       step: "1. Ability Modifiers",
-      formula: `STR: ${build.abilities.strength} → ${strMod >= 0 ? '+' : ''}${strMod}, DEX: ${build.abilities.dexterity} → ${dexMod >= 0 ? '+' : ''}${dexMod}`,
+      formula: `STR: ${build.abilityScores?.strength || 10} → ${strMod >= 0 ? '+' : ''}${strMod}, DEX: ${build.abilityScores?.dexterity || 10} → ${dexMod >= 0 ? '+' : ''}${dexMod}`,
       result: `Primary modifier: ${primaryMod >= 0 ? '+' : ''}${primaryMod}`,
       explanation: "Calculate ability modifiers using (score - 10) / 2, rounded down"
     });
@@ -527,7 +527,7 @@ export const LevelingExplorer: React.FC = () => {
     });
     
     // Step 5: Multiple attacks
-    const attacks = levelData.attacksPerAction;
+    const attacks = levelData.extraAttacks + 1;
     trace.push({
       step: "5. Multiple Attacks",
       formula: `${attacks} attack${attacks > 1 ? 's' : ''} per action`,
@@ -699,13 +699,13 @@ export const LevelingExplorer: React.FC = () => {
                     <div>
                       <span className="text-gray-600 dark:text-gray-400">HP:</span>
                       <span className="ml-2 font-medium text-gray-900 dark:text-white">
-                        {levelData.hitPointsAverage}
+                        {Math.round(levelData.hitPointsAverage)}
                       </span>
                     </div>
                     <div>
                       <span className="text-gray-600 dark:text-gray-400">Attacks:</span>
                       <span className="ml-2 font-medium text-gray-900 dark:text-white">
-                        {levelData.attacksPerAction}
+                        {levelData.extraAttacks + 1}
                       </span>
                     </div>
                     <div>
@@ -722,7 +722,7 @@ export const LevelingExplorer: React.FC = () => {
                       <div className="flex flex-wrap gap-1 mt-1">
                         {levelData.features.map((feature, idx) => (
                           <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                            {feature.name}
+                            {feature}
                           </span>
                         ))}
                       </div>
